@@ -253,9 +253,11 @@ async function assertSvgTextFits(page) {
   });
   expect(overflow).toEqual([]);
 }
-for (const viewport of [{width:390,height:844},{width:768,height:1024},{width:1440,height:810}]) {
-  test(`layouts and translations at ${viewport.width}px keep diagrams and controls readable`, async ({ page }) => {
-    await page.setViewportSize(viewport); await English(page);
+for (const viewport of [{width:390,height:844},{width:768,height:1024},{width:1440,height:810},{width:390,height:844,font:'DejaVu Sans'}]) {
+  test(`layouts and translations at ${viewport.width}px${viewport.font ? ` with ${viewport.font}` : ''} keep diagrams and controls readable`, async ({ page }) => {
+    await page.setViewportSize({width:viewport.width,height:viewport.height});
+    if(viewport.font) await page.addStyleTag({content:':root{font-family:"DejaVu Sans",sans-serif}'});
+    await English(page);
     for (const reaction of ['starch','maltose','sucrose']) {
       await select(page, reaction); await play(page); await forward(page, 14500);
       await assertNoHorizontalOverflow(page); await assertSvgTextFits(page);
