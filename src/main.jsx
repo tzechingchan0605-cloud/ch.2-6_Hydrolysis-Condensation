@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Atom, ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, ClipboardList, Download, Droplets, FlaskConical, GripVertical, Info, Leaf, Link2, Microscope, Minus, Pause, Play, Plus, Redo2, RotateCcw, Scissors, SkipForward, Sparkles, Undo2, X } from 'lucide-react';
+import { Atom, ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, ClipboardList, Download, Droplets, FlaskConical, GripVertical, Info, Leaf, Link2, Microscope, Minus, Pause, Play, Plus, Redo2, RotateCcw, Scissors, SkipForward, Sparkles, Trash2, Undo2, X } from 'lucide-react';
 import MolecularCanvas, { SmallMolecule, MoleculeGlyph } from './Molecules';
-import { MODULES, TYPES, clone, initialModels, components, productKey, addNode, preset, join, hydrolyse, enzymeFor } from './engine';
+import { MODULES, TYPES, clone, initialModels, components, productKey, addNode, discardMolecules, preset, join, hydrolyse, enzymeFor } from './engine';
 import { translate, modules, challenges } from './content';
 import './styles.css';
 
@@ -25,6 +25,7 @@ function App() {
   const [state, setState] = useState(readProgress);
   const [selected, setSelected] = useState([]);
   const [selectedBonds, setSelectedBonds] = useState([]);
+  const [discardDrag, setDiscardDrag] = useState(null);
   const [feedback, setFeedback] = useState({ key: 'ready', error: false });
   const [modal, setModal] = useState(null);
   const [animation, setAnimation] = useState(null);
@@ -41,6 +42,7 @@ function App() {
   const response = state.responses[state.task] || { prediction: '', explanation: '' };
   const last = state.records.findLast(r => r.module === module && r.process !== 'response');
   const busy = animation && animation.stage < 3;
+  const playbackMessage = busy ? animation.stage === 1 && animation.record.process === 'hydrolysis' ? 'waterEntering' : animation.stage === 2 && animation.record.process === 'condensation' ? 'waterLeaving' : `stage${animation.stage}` : null;
   const displayedModel = busy ? animation.stage < 2 ? animation.record.before : animation.record.after : model;
   const moduleInfo = modules.find(m => m.id === module);
   const isNucleotide = module === 'nucleotides';
@@ -53,7 +55,7 @@ function App() {
   }, [state, module]);
   useEffect(() => {
     if (!animation || animation.stage >= 3 || paused) return;
-    const timeout = setTimeout(() => setAnimation(a => a ? { ...a, stage: a.stage + 1 } : null), 650 / state.speed);
+    const timeout = setTimeout(() => setAnimation(a => a ? { ...a, stage: a.stage + 1 } : null), 1950 / state.speed);
     return () => clearTimeout(timeout);
   }, [animation, paused, state.speed]);
 
@@ -74,6 +76,13 @@ function App() {
     try { commit(addNode(model, type, module)); setFeedback({ key: 'ready' }); } catch (e) { setFeedback({ key: e.message, error: true }); }
   }
   function toggleNodes(ids) { setSelected(prev => ids.every(id => prev.includes(id)) ? prev.filter(id => !ids.includes(id)) : [...new Set([...prev, ...ids])]); setSelectedBonds([]); }
+  function discard(ids) {
+    if (busy) return;
+    const next = discardMolecules(model, ids);
+    if (next === model) return;
+    commit(next);
+    setFeedback({ key: 'moleculesDiscarded' });
+  }
   function toggleBond(id) { setSelectedBonds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); setSelected([]); }
   function travel(direction) {
     if (busy) return;
@@ -143,12 +152,13 @@ function App() {
 
           <section className="assembly-area"><div className="canvas-heading"><div><span className="eyebrow small"><span className="live-dot" />{t('live')}</span><h2>{t('workbench')}</h2></div><div className="canvas-toolbar"><IconButton label={t('undo')} disabled={!history.past.length || !!busy} onClick={() => travel('undo')}><Undo2 size={17} /></IconButton><IconButton label={t('redo')} disabled={!history.future.length || !!busy} onClick={() => travel('redo')}><Redo2 size={17} /></IconButton><span className="toolbar-divider" /><IconButton label={t('reset')} disabled={!!busy} onClick={() => { commit(initialModels()[module]); setFeedback({ key: 'modelReset' }); }}><RotateCcw size={16} /></IconButton></div></div>
             <div className="canvas-options"><p>{t(isNucleotide ? 'nucleotideHint' : 'canvasHint')}</p><button className="text-button" disabled={!!busy} onClick={() => { setSelected(model.nodes.map(n => n.id)); setSelectedBonds([]); }}>{t('selectAll')}</button></div>
-            <div className={`diagram-area ${busy ? `animating stage-${animation.stage}` : ''}`}>
-              <MolecularCanvas model={displayedModel} module={module} t={t} selected={busy ? [] : selected} selectedBonds={busy ? [] : selectedBonds} onSelect={toggleNodes} onBond={toggleBond} labels={state.labels} disabled={!!busy} onDrop={add} />
-              {busy && <div className={`reaction-stage stage-${animation.stage}`} aria-live="polite"><span className="stage-pulse" />{t(`stage${animation.stage}`)}{animation.stage === 2 && !isNucleotide && <span className="water-flight"><Droplets size={18} />{animation.record.process === 'condensation' ? '+' : '−'}{animation.record.water} H₂O</span>}</div>}
+            <div className={`diagram-area ${busy ? `animating stage-${animation.stage}` : ''} ${paused ? 'animation-paused' : ''}`} style={{ '--reaction-duration': `${1950 / state.speed}ms` }}>
+              <MolecularCanvas model={displayedModel} module={module} t={t} selected={busy ? [] : selected} selectedBonds={busy ? [] : selectedBonds} onSelect={toggleNodes} onBond={toggleBond} labels={state.labels} disabled={!!busy} onDrop={add} onDiscard={discard} onDragState={setDiscardDrag} playback={busy ? animation : null} />
+              {busy && <div className={`reaction-stage stage-${animation.stage}`} aria-live="polite"><span className="stage-pulse" />{t(playbackMessage)}</div>}
               <div className="canvas-bottom"><span><span className="schematic-mark" />{t('schematic')}</span><div className="toggles"><label><input type="checkbox" checked={state.labels} onChange={e => change({ labels: e.target.checked })} />{t('labels')}</label><label><input type="checkbox" checked={state.hints} onChange={e => change({ hints: e.target.checked })} />{t('hints')}</label></div></div>
             </div>
-            <div className="canvas-status"><div className={`feedback ${feedback.error ? 'feedback-error' : ''}`} role="status" aria-live="polite">{feedback.error ? <CircleHelp size={15} /> : <Info size={15} />}<span>{t(feedback.key)}</span></div>{(selected.length > 0 || selectedBonds.length > 0) && <button className="selection-count" onClick={clearSelection}>{t('selected')} {selectedBonds.length || selected.length}<X size={12} /></button>}</div>
+            <div className={`discard-bar ${discardDrag ? 'drag-active' : ''} ${discardDrag?.outside ? 'discard-ready' : ''}`}><p id="discard-help">{t('discardHint')}</p><button className="discard-button" disabled={!!busy || (!selected.length && !discardDrag)} onClick={() => discard(selected)} aria-describedby="discard-help"><Trash2 size={15} /><span>{t(discardDrag?.outside ? 'releaseToRemove' : 'removeSelected')}</span></button></div>
+            <div className="canvas-status"><div className={`feedback ${feedback.error ? 'feedback-error' : ''}`} role="status" aria-live="polite">{feedback.error ? <CircleHelp size={15} /> : <Info size={15} />}<span>{t(playbackMessage || feedback.key)}</span></div>{(selected.length > 0 || selectedBonds.length > 0) && <button className="selection-count" onClick={clearSelection}>{t('selected')} {selectedBonds.length || selected.length}<X size={12} /></button>}</div>
             <div className="model-stats"><div><span className="stat-icon"><Atom size={15} /></span><span>{t('units')}</span><strong data-testid="unit-count">{displayedModel.nodes.length}</strong></div><div><span className="stat-icon"><Link2 size={15} /></span><span>{t(isNucleotide ? 'connections' : 'bonds')}</span><strong data-testid="bond-count">{displayedModel.edges.length}</strong></div><div><span className="stat-icon water-stat"><Droplets size={15} /></span><span>{t('waterAvailable')}</span><strong data-testid="water-count">{displayedModel.water}</strong></div></div>
           </section>
 

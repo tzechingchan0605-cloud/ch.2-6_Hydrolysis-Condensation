@@ -36,6 +36,18 @@ export function components(model) {
   }
   return result;
 }
+export function discardMolecules(model, nodeIds) {
+  // Discard whole connected molecules; this is not a hydrolysis reaction.
+  const selected = new Set(nodeIds);
+  const discarded = new Set(components(model)
+    .filter(group => group.nodes.some(node => selected.has(node.id)))
+    .flatMap(group => group.nodes.map(node => node.id)));
+  if (!discarded.size) return model;
+  const next = clone(model);
+  next.nodes = next.nodes.filter(node => !discarded.has(node.id));
+  next.edges = next.edges.filter(edge => !discarded.has(edge.a) && !discarded.has(edge.b));
+  return next;
+}
 export function chainOrder(component) {
   if (!component.nodes.length) return [];
   const degree = id => component.edges.filter(e => e.a === id || e.b === id).length;

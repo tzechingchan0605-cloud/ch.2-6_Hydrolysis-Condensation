@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { components, chainOrder, productKey } from './engine';
 
 export const colours = {
@@ -52,9 +52,80 @@ function makeLayout(model, module) {
   }
   return { placed, height };
 }
-export default function MolecularCanvas({ model, module, t, selected, selectedBonds, onSelect, onBond, labels, disabled, onDrop }) {
+function nodePositions(group, module, x, y) {
+  const positions = {}, order = chainOrder(group);
+  if (module === 'lipids' && group.edges.length) {
+    positions[group.nodes.find(n => n.type === 'glycerol').id] = [x - 72, y];
+    group.nodes.filter(n => n.type !== 'glycerol').forEach((n, i) => { positions[n.id] = [x + 66, y + (i - (group.nodes.length - 2) / 2) * 49]; });
+  } else if (module === 'nucleotides' && group.edges.length) {
+    positions[group.nodes.find(n => n.type === 'phosphate').id] = [x - 100, y - 32];
+    positions[group.nodes.find(n => ['deoxy', 'ribose'].includes(n.type)).id] = [x - 12, y + 8];
+    positions[group.nodes.find(n => n.type.startsWith('base')).id] = [x + 95, y + 8];
+  } else if (order.length > 6) {
+    const cols = Math.ceil(order.length / 2);
+    order.forEach((n, i) => {
+      const col = i < cols ? i : cols - 1 - (i - cols);
+      positions[n.id] = [x + (col - (cols - 1) / 2) * 120, y + (i < cols ? -65 : 65)];
+    });
+  } else order.forEach((n, i) => { positions[n.id] = [x + (i - (order.length - 1) / 2) * (module === 'proteins' ? 105 : 100), y]; });
+  return positions;
+}
+function BondWater({ playback, positions, left, height, t }) {
+  const arrowId = useId();
+  if (!playback) return null;
+  const { record, stage } = playback;
+  const entering = record.process === 'hydrolysis';
+  if ((!entering || stage !== 1) && (record.process !== 'condensation' || stage !== 2)) return null;
+  const source = entering ? record.before : record.after;
+  const other = entering ? record.after : record.before;
+  const edges = source.edges.filter(edge => !other.edges.some(e => e.id === edge.id));
+  return <g className="bond-water-overlay" role="img" aria-label={t(entering ? 'waterEntering' : 'waterLeaving')}>
+    <defs><marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#367c97" /></marker></defs>
+    {edges.map((edge, i) => {
+      const a = positions[edge.a], b = positions[edge.b];
+      const bond = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const pool = [left + 48 + (i % 5) * 53, height - 38 - Math.floor(i / 5) * 48];
+      const [from, to] = entering ? [pool, bond] : [bond, pool];
+      return <g key={`${record.id}-${edge.id}`} data-bond-id={edge.id} data-direction={entering ? 'in' : 'out'} className="bond-water-path">
+        <line className="water-trajectory" x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} markerEnd={`url(#${arrowId})`} />
+        <circle className="water-bond-target" cx={bond[0]} cy={bond[1]} r="17" />
+        <g transform={`translate(${from[0]} ${from[1]})`}><g className="travelling-water" style={{ '--water-dx': `${to[0] - from[0]}px`, '--water-dy': `${to[1] - from[1]}px` }}>
+          <rect x="-31" y="-26" width="62" height="62" rx="12" fill="#ffffffed" stroke="#9ec8d7" />
+          <path d="M-16 -13 0 0 16 -13" fill="none" stroke="#367c97" strokeWidth="4" />
+          <circle r="12" fill="#508eab" stroke="#2e647f" /><text y="4" textAnchor="middle" fill="white" fontSize="12" fontWeight="700">O</text>
+          {[-16, 16].map(x => <g key={x}><circle cx={x} cy="-13" r="8" fill="white" stroke="#508eab" strokeWidth="1.5" /><text x={x} y="-10" textAnchor="middle" fill="#2e647f" fontSize="9" fontWeight="700">H</text></g>)}
+          <text y="29" textAnchor="middle" fill="#245e78" fontSize="15" fontWeight="700">H₂O</text>
+        </g></g>
+      </g>;
+    })}
+    <text x={left + 20} y={height - 3} className="water-pool-label">{t('water')} · H₂O</text>
+  </g>;
+}
+export default function MolecularCanvas({ model, module, t, selected, selectedBonds, onSelect, onBond, labels, disabled, onDrop, onDiscard, onDragState, playback }) {
   const { placed, height } = makeLayout(model, module);
+  const dropzone = useRef(null);
+  const gesture = useRef(null);
+  const suppressClick = useRef(false);
+  const [drag, setDrag] = useState(null);
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 580px)').matches);
+  useEffect(() => {
+    // A module/preset change or reaction cancels any unfinished gesture.
+    gesture.current = null;
+    setDrag(null);
+    onDragState(null);
+  }, [model, module, disabled, onDragState]);
+  useEffect(() => {
+    const escape = event => {
+      if (event.key === 'Escape' && gesture.current) {
+        suppressClick.current = true;
+        gesture.current = null;
+        setDrag(null);
+        onDragState(null);
+      }
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [onDragState]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 580px)');
     const update = () => setMobile(media.matches);
@@ -64,26 +135,47 @@ export default function MolecularCanvas({ model, module, t, selected, selectedBo
   const minX = Math.min(...placed.map(g => g.x - g.w / 2));
   const maxX = Math.max(...placed.map(g => g.x + g.w / 2));
   const viewWidth = mobile && placed.length ? Math.min(760, Math.max(380, maxX - minX + 50)) : 760;
-  return <div className="canvas-dropzone" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!disabled) onDrop(e.dataTransfer.getData('application/molecule')); }}>
+  const allPositions = Object.assign({}, ...placed.map(({ group, x, y }) => nodePositions(group, module, x, y)));
+  function outside(event) {
+    const bounds = dropzone.current.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+  }
+  function beginDrag(event, ids) {
+    if (disabled || event.button !== 0 || !event.isPrimary || gesture.current) return;
+    suppressClick.current = false;
+    const inverse = event.currentTarget.ownerSVGElement.getScreenCTM().inverse();
+    gesture.current = {
+      ids, pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+      inverse, origin: new DOMPoint(event.clientX, event.clientY).matrixTransform(inverse), active: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveDrag(event) {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    if (!current.active && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 8) return;
+    current.active = true;
+    suppressClick.current = true;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(current.inverse);
+    const isOutside = outside(event);
+    setDrag({ ids: current.ids, dx: point.x - current.origin.x, dy: point.y - current.origin.y, outside: isOutside });
+    onDragState({ outside: isOutside });
+  }
+  function endDrag(event, cancelled = false) {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    gesture.current = null;
+    setDrag(null);
+    onDragState(null);
+    if (current.active && !cancelled && !disabled && outside(event)) onDiscard(current.ids);
+  }
+  return <div ref={dropzone} className="canvas-dropzone" onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={e => endDrag(e, true)} onLostPointerCapture={e => endDrag(e, true)} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!disabled) onDrop(e.dataTransfer.getData('application/molecule')); }}>
     {!model.nodes.length ? <div className="empty-canvas"><svg viewBox="-70 -65 140 130" aria-hidden="true"><MoleculeGlyph type="glucose" /></svg><h3>{t('empty')}</h3><p>{t('emptyHint')}</p></div> : <svg className={`molecular-canvas ${viewWidth > 600 ? 'crowded' : ''}`} viewBox={`${(760 - viewWidth) / 2} 0 ${viewWidth} ${height}`} aria-label={t('workbench')}>
       {placed.map(({ group, x, y, w }) => {
-        const positions = {};
+        const positions = allPositions;
         const order = chainOrder(group);
-        if (module === 'lipids' && group.edges.length) {
-          positions[group.nodes.find(n => n.type === 'glycerol').id] = [x - 72, y];
-          group.nodes.filter(n => n.type !== 'glycerol').forEach((n, i) => { positions[n.id] = [x + 66, y + (i - (group.nodes.length - 2) / 2) * 49]; });
-        } else if (module === 'nucleotides' && group.edges.length) {
-          positions[group.nodes.find(n => n.type === 'phosphate').id] = [x - 100, y - 32];
-          positions[group.nodes.find(n => ['deoxy', 'ribose'].includes(n.type)).id] = [x - 12, y + 8];
-          positions[group.nodes.find(n => n.type.startsWith('base')).id] = [x + 95, y + 8];
-        } else if (order.length > 6) {
-          const cols = Math.ceil(order.length / 2);
-          order.forEach((n, i) => {
-            const col = i < cols ? i : cols - 1 - (i - cols);
-            positions[n.id] = [x + (col - (cols - 1) / 2) * 120, y + (i < cols ? -65 : 65)];
-          });
-        } else order.forEach((n, i) => { positions[n.id] = [x + (i - (order.length - 1) / 2) * (module === 'proteins' ? 105 : 100), y]; });
-        return <g key={group.nodes[0].id}>
+        const moving = drag?.ids.includes(group.nodes[0].id);
+        return <g key={group.nodes[0].id} className={moving ? `dragged-molecule ${drag.outside ? 'outside-workbench' : ''}` : undefined} transform={moving ? `translate(${drag.dx} ${drag.dy})` : undefined}>
           {group.edges.map(edge => {
             const a = positions[edge.a], b = positions[edge.b];
             const active = selectedBonds.includes(edge.id);
@@ -96,7 +188,7 @@ export default function MolecularCanvas({ model, module, t, selected, selectedBo
           })}
           {group.nodes.map(node => {
             const [nx, ny] = positions[node.id];
-            return <g key={node.id} role="button" tabIndex={disabled ? -1 : 0} aria-label={t(node.type)} aria-pressed={selected.includes(node.id)} className="molecule-control" onClick={() => !disabled && onSelect(group.nodes.map(n => n.id))} onKeyDown={e => { if (['Enter', ' '].includes(e.key)) { e.preventDefault(); if (!disabled) onSelect(group.nodes.map(n => n.id)); } }}>
+            return <g key={node.id} role="button" tabIndex={disabled ? -1 : 0} aria-label={t(node.type)} aria-describedby="discard-help" aria-pressed={selected.includes(node.id)} className="molecule-control" onPointerDown={e => beginDrag(e, group.nodes.map(n => n.id))} onClick={() => !disabled && !suppressClick.current && onSelect(group.nodes.map(n => n.id))} onKeyDown={e => { if (['Enter', ' '].includes(e.key)) { e.preventDefault(); if (!disabled) onSelect(group.nodes.map(n => n.id)); } }}>
               <title>{t(node.type)}</title>{!group.edges.length && <rect x={nx - 65} y={ny - 72} width="130" height="165" rx="9" fill="transparent" />}<MoleculeGlyph type={node.type} x={nx} y={ny} selected={selected.includes(node.id)} aminoEnd={order[0]?.id === node.id} carboxylEnd={order.at(-1)?.id === node.id} reverseEndGroups={order.length > 6 && order.indexOf(node) >= Math.ceil(order.length / 2)} />
               {labels && !group.edges.length && <text x={nx} y={ny + (node.type === 'glycerol' ? 85 : node.type.startsWith('aa') ? 57 : 65)} textAnchor="middle" className="molecule-label">{t(node.type)}</text>}
             </g>;
@@ -104,6 +196,7 @@ export default function MolecularCanvas({ model, module, t, selected, selectedBo
           {group.edges.length > 0 && labels && <g><path d={`M${x - w / 2 + 20},${y + (order.length > 6 ? 130 : module === 'lipids' ? 82 : 65)} v5 H${x + w / 2 - 20} v-5`} fill="none" stroke="#c6cbbf" /><text x={x} y={y + (order.length > 6 ? 158 : module === 'lipids' ? 110 : 93)} textAnchor="middle" className="product-label">{t(productKey(group, module))}{group.nodes.length > 2 && module !== 'lipids' && module !== 'nucleotides' ? ` · ${group.nodes.length}` : ''}</text></g>}
         </g>;
       })}
+      <BondWater playback={playback} positions={allPositions} left={(760 - viewWidth) / 2} height={height} t={t} />
     </svg>}
   </div>;
 }

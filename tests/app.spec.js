@@ -182,6 +182,184 @@ test('dragging adds a component without forming bonds and is undoable', async ({
   await counts(page, 3, 0, 0);
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await counts(page, 2, 0, 0);
 });
+async function dragOut(page, molecule) {
+  // Use real pointer input to verify SVG pointer capture and release outside it.
+  const source = await molecule.locator('.molecule-glyph').boundingBox();
+  const target = await page.locator('.discard-bar').boundingBox();
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+  await expect(page.getByRole('button', { name: 'Release to remove', exact: true })).toBeVisible();
+  await page.mouse.up();
+}
+test('drag an unwanted sugar out; undo, redo and reload preserve the result', async ({ page }) => {
+  await start(page);
+  await page.getByRole('button', { name: 'Add Fructose', exact: true }).click();
+  await dragOut(page, page.locator('.molecular-canvas').getByRole('button', { name: 'Fructose', exact: true }));
+  await counts(page, 2, 0, 0);
+  await expect(page.locator('.molecular-canvas').getByRole('button', { name: 'Fructose', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('Molecules removed');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click(); await counts(page, 3, 0, 0);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click(); await counts(page, 2, 0, 0);
+  await page.reload(); await counts(page, 2, 0, 0);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click(); await counts(page, 3, 0, 0);
+});
+test('dropping inside, Escape and pointer cancellation keep the sugar', async ({ page }) => {
+  await start(page);
+  const sugar = page.locator('.molecular-canvas').getByRole('button', { name: 'Glucose', exact: true }).first();
+  const source = await sugar.locator('.molecule-glyph').boundingBox();
+  const x = source.x + source.width / 2, y = source.y + source.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x + 30, y + 15, { steps: 5 }); await page.mouse.up();
+  await counts(page, 2, 0, 0);
+  await expect(sugar).toHaveAttribute('aria-pressed', 'false');
+  const target = await page.locator('.discard-bar').boundingBox();
+  for (const cancellation of ['escape', 'pointercancel']) {
+    await page.mouse.move(x, y); await page.mouse.down();
+    await page.mouse.move(target.x + 20, target.y + 20, { steps: 8 });
+    if (cancellation === 'escape') await page.keyboard.press('Escape');
+    else await sugar.evaluate(element => element.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 })));
+    await page.mouse.up();
+    await counts(page, 2, 0, 0);
+    await expect(page.locator('.discard-bar')).not.toHaveClass(/discard-ready/);
+  }
+  // A normal click after a cancelled drag must still select the sugar.
+  await sugar.click(); await expect(sugar).toHaveAttribute('aria-pressed', 'true');
+});
+test('discarding bonded sugar keeps the molecule intact and the water ledger unchanged', async ({ page }) => {
+  await start(page); await joinAll(page);
+  await page.getByRole('button', { name: 'Add Galactose', exact: true }).click();
+  await dragOut(page, page.locator('.molecular-canvas').getByRole('button', { name: 'Glucose', exact: true }).first());
+  await counts(page, 1, 0, 1);
+  await expect(page.locator('.water-ledger')).toContainText('Released 1');
+  await expect(page.locator('.water-ledger')).toContainText('Used 0');
+  await expect(page.locator('.molecular-canvas')).toContainText('Galactose');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await counts(page, 3, 1, 1);
+  await expect(page.locator('.molecular-canvas')).toContainText('Maltose');
+});
+test('keyboard users can remove selected molecules and undo in both languages', async ({ page }) => {
+  await start(page);
+  await expect(page.getByRole('button', { name: 'Remove selected', exact: true })).toBeDisabled();
+  const sugar = page.locator('.molecular-canvas').getByRole('button', { name: 'Glucose', exact: true }).first();
+  await sugar.focus(); await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Remove selected', exact: true }).focus(); await page.keyboard.press('Enter');
+  await counts(page, 1, 0, 0);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await page.getByRole('button', { name: '繁體中文', exact: true }).click();
+  await page.getByRole('button', { name: '全選構件', exact: true }).click();
+  await page.getByRole('button', { name: '移除所選分子', exact: true }).click();
+  await counts(page, 0, 0, 0);
+  await expect(page.getByRole('heading', { name: '從一個構件開始', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '復原', exact: true }).click(); await counts(page, 2, 0, 0);
+});
+test('bonding remains visible longer and blocks removal during playback', async ({ page }) => {
+  await start(page); await selectAll(page);
+  await page.getByRole('button', { name: 'Join by condensation', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove selected', exact: true })).toBeDisabled();
+  const source = await page.locator('.molecular-canvas .molecule-glyph').first().boundingBox();
+  const target = await page.locator('.discard-bar').boundingBox();
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2); await page.mouse.down();
+  await page.mouse.move(target.x + 20, target.y + 20, { steps: 8 }); await page.mouse.up();
+  await counts(page, 2, 0, 0);
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  // At 2x speed the former animation ended in 975ms; it must still be playing.
+  await page.waitForTimeout(1200);
+  await expect(page.getByRole('button', { name: 'Join by condensation', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Join by condensation', exact: true })).toBeEnabled();
+  await counts(page, 2, 1, 1);
+});
+async function waterDistance(page) {
+  return page.locator('.bond-water-path').first().evaluate(path => {
+    const water = path.querySelector('.travelling-water rect').getBoundingClientRect();
+    const bond = path.querySelector('.water-bond-target').getBoundingClientRect();
+    return Math.hypot(water.x + water.width / 2 - bond.x - bond.width / 2, water.y + water.height / 2 - bond.y - bond.height / 2);
+  });
+}
+test('complete water molecule moves away from a new bond and into a bond before hydrolysis', async ({ page }) => {
+  await start(page); await selectAll(page);
+  await page.getByRole('button', { name: 'Join by condensation', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'Condensation: H₂O leaves the new bond', exact: true })).toBeVisible();
+  await expect(page.locator('.travelling-water')).toHaveCount(1);
+  await expect(page.locator('.travelling-water')).toContainText('OHHH₂O');
+  const beforeLeaving = await waterDistance(page);
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  const afterLeaving = await waterDistance(page);
+  expect(afterLeaving).toBeGreaterThan(beforeLeaving + 15);
+  await page.waitForTimeout(150);
+  expect(Math.abs(await waterDistance(page) - afterLeaving)).toBeLessThan(1);
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await counts(page, 2, 1, 1);
+
+  await page.getByRole('button', { name: 'Hydrolyse all bonds', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'Hydrolysis: H₂O enters before the bond breaks', exact: true })).toBeVisible();
+  await expect(page.locator('.bond-water-path')).toHaveAttribute('data-direction', 'in');
+  // The water's destination is the highlighted bond, not an arbitrary canvas point.
+  const endpoint = await page.locator('.bond-water-path').evaluate(path => {
+    const line = path.querySelector('.water-trajectory'), bond = path.querySelector('.water-bond-target');
+    return { to: [line.getAttribute('x2'), line.getAttribute('y2')], bond: [bond.getAttribute('cx'), bond.getAttribute('cy')] };
+  });
+  expect(endpoint.to).toEqual(endpoint.bond);
+  await counts(page, 2, 1, 1);
+  const beforeEntering = await waterDistance(page);
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  expect(await waterDistance(page)).toBeLessThan(beforeEntering - 15);
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await counts(page, 2, 0, 0);
+  await expect(page.locator('.bond-water-path')).toHaveCount(0);
+});
+test('each changed bond has one water molecule and recognition has none', async ({ page }) => {
+  await start(page);
+  await page.locator('.examples').getByRole('button', { name: '6 glucose units', exact: true }).click();
+  await selectAll(page); await page.getByRole('button', { name: 'Join by condensation', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await expect(page.locator('.travelling-water')).toHaveCount(5);
+  await counts(page, 6, 5, 5);
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await page.getByRole('button', { name: 'Bond 3', exact: true }).click();
+  await page.getByRole('button', { name: 'Hydrolyse selected bonds', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Step', exact: true }).click();
+  await expect(page.locator('.travelling-water')).toHaveCount(1);
+  const highlighted = await page.locator('.water-bond-target').evaluate(circle => [circle.getAttribute('cx'), circle.getAttribute('cy')]);
+  const selectedBond = await page.getByRole('button', { name: 'Bond 3', exact: true }).locator('circle').evaluate(circle => [circle.getAttribute('cx'), circle.getAttribute('cy')]);
+  expect(highlighted).toEqual(selectedBond);
+  await page.locator('.module-tabs').getByRole('button', { name: /Nucleotides/ }).click();
+  await selectAll(page); await page.getByRole('button', { name: 'Assemble nucleotide', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: 'Step', exact: true }).click();
+    await expect(page.locator('.travelling-water')).toHaveCount(0);
+  }
+});
+test.describe('touch removal', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  test('drag a sugar out with a touch gesture', async ({ page }) => {
+    await start(page);
+    await page.locator('.canvas-dropzone').scrollIntoViewIfNeeded();
+    const source = await page.locator('.molecular-canvas .molecule-glyph').first().boundingBox();
+    const zone = await page.locator('.canvas-dropzone').boundingBox();
+    const x = source.x + source.width / 2, y = source.y + source.height / 2;
+    const session = await page.context().newCDPSession(page);
+    await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let i = 1; i <= 10; i++) await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + (zone.x - 8 - x) * i / 10, y }] });
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await counts(page, 1, 0, 0);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await counts(page, 2, 0, 0);
+    await session.detach();
+  });
+});
 test('all eight tasks load, and supplied lactose requires water before hydrolysis', async ({ page }) => {
   await start(page); await page.getByRole('button', { name: 'Guided challenges', exact: true }).click();
   for (let i = 0; i < 8; i++) {

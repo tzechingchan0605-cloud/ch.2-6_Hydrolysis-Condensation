@@ -14,8 +14,8 @@ npm run dev -- --port 5173
 Node.js 24 and npm are available in the prepared environment. No account, API key, backend, remote fonts or paid service is needed. The app works offline after being served and loaded. Progress is stored in the browser's local storage, separately for each origin. Export your notebook before clearing browser storage.
 
 ```bash
-npm test          # 24 scientific engine/content checks
-npm run test:e2e  # 17 functional browser tests
+npm test          # 26 scientific engine/content checks
+npm run test:e2e  # 25 functional browser tests
 npm run build    # production bundle in dist/
 ```
 
@@ -57,6 +57,23 @@ is set to GitHub Actions, then rerun the workflow from the Actions tab.
 5. Undo/redo restores the complete molecular arrangement and water ledger. Reset affects the current module; the footer reset clears all models, answers and records after confirmation.
 6. Use guided mode for eight predict–operate–explain activities. The supplied lactose task starts with no water, so students must add it. Student responses are saved locally; **Save response** also attaches them to that task's reaction records. Open explanations are not automatically graded.
 7. Download the notebook as UTF-8 CSV. English/Chinese switches translate scientific identifiers and headings; students' own writing is preserved as entered.
+
+Drag a molecule outside the diagram area and release to discard it, using a mouse
+or touch. Joined pieces move and are discarded together, so discarding does not
+simulate breaking a chemical bond or change the water ledger. Alternatively,
+select molecules and choose **Remove selected**. Undo/redo restores removals;
+dropping inside the diagram, pressing Escape, or cancelling a gesture keeps the
+molecule. Removal is disabled during reaction playback.
+
+Reaction playback now lasts three times as long at each speed setting, giving
+students more time to observe bonding and water movement. Pause, step, replay and
+the playback speed controls remain available.
+
+Each changed bond has its own complete H₂O symbol and direction arrow. During
+condensation, water moves away from the new bond; during hydrolysis, water moves
+into the highlighted bond before the model separates. The movement uses the
+actual model bond positions, supports pause and speed changes, and is schematic.
+Nucleotide component recognition does not show or consume water.
 
 All drag actions have button and keyboard alternatives. Tab to a molecular component or bond and press Enter/Space to select it. Dialogs support Escape and focus management. Reaction playback supports pause, step, replay and speed control. Replay never performs another chemical reaction or changes the actual water balance.
 

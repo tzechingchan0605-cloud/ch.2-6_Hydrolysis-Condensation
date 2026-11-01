@@ -34,3 +34,25 @@
 @media(max-width:580px){.tray-hint,.canvas-options p{font-size:10px}.block-tray>.tray-hint{font-size:9px}.canvas-bottom>span,.toggles{font-size:8px}.feedback{font-size:10px}.conditions-note{font-size:10px}.reaction-action p{font-size:9px}.function-grid p{font-size:9px}.model-limitation{font-size:9px}.chapter-card>p{font-size:11px}.playback-controls>.text-button{font-size:9px}}
 @media(max-width:580px){.molecular-canvas.crowded .molecule-label,.molecular-canvas.crowded .product-label{font-size:22px}.chapter-card{display:block}.chapter-card>.digestion-diagram{min-height:90px;margin:10px 0}.chapter-card .digestion-products .small-molecule{width:38px;height:48px}.chapter-card .food-symbol{height:44px;width:44px}.chapter-card .enzyme-arrow{min-width:90px}.chapter-card .enzyme-arrow>span{font-size:9px;max-width:110px}.chapter-card .enzyme-arrow>svg{width:50px}.chapter-card>p{font-size:12px}.chapter-card .dna-illustrations{margin:20px 0}.model-stats>div{display:grid;grid-template-columns:20px 1fr;column-gap:5px}.model-stats>div>strong{grid-column:2;margin:0}.model-stats>div>span:nth-child(2){font-size:8px}.molecular-canvas{max-height:none}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+.molecule-control{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.molecular-canvas{touch-action:none}
+.molecule-control:active{cursor:grabbing}
+.dragged-molecule{opacity:.75;pointer-events:none}
+.dragged-molecule.outside-workbench{opacity:.45}
+.discard-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-top:10px;padding:9px 10px;border:1px dashed #d7ddce;border-radius:7px;background:#fafbf6}
+.discard-bar p{margin:0;font-size:10px;line-height:1.6;color:#7b8970;min-width:0}
+.discard-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;min-height:36px;padding:7px 9px;border:1px solid #d3d9cb;border-radius:5px;font-size:10px;color:#6d795e;background:#fffefa}
+.discard-button:hover:enabled{background:#f5ebe1;color:#935d3c;border-color:#cbae97}
+.discard-bar.drag-active{border-color:#ae8e72;background:#fcf6ef}
+.discard-bar.discard-ready{border-color:#ad714d;background:#f9eddf}
+.discard-ready .discard-button{background:#9d6543;color:white;border-color:#9d6543}
+@media(max-width:580px){.discard-bar{flex-wrap:wrap}.discard-button{min-height:44px;font-size:12px}.discard-bar p{font-size:11px}}
+.stage-1 .molecular-canvas,.stage-2 .molecular-canvas{animation:none}
+.bond-water-overlay{pointer-events:none}
+.water-trajectory{stroke:#367c97;stroke-width:2;stroke-dasharray:5 5;opacity:.8}
+.water-bond-target{fill:#e2f1f67a;stroke:#367c97;stroke-width:3}
+.travelling-water{animation:waterAlongBond var(--reaction-duration) ease-in-out both}
+.water-pool-label{fill:#367c97;font-size:13px;font-weight:600}
+.animation-paused *{animation-play-state:paused!important}
+.reaction-stage{max-width:calc(100% - 16px);white-space:normal;text-align:center}
+@keyframes waterAlongBond{0%,10%{transform:translate(0,0)}85%,100%{transform:translate(var(--water-dx),var(--water-dy))}}

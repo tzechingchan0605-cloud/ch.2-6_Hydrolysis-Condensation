@@ -1,9 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TYPES, clone, emptyModel, preset, addNode, join, hydrolyse, components, productKey, chainOrder, initialModels } from '../src/engine.js';
+import { TYPES, clone, emptyModel, preset, addNode, discardMolecules, join, hydrolyse, components, productKey, chainOrder, initialModels } from '../src/engine.js';
 import { dictionary, challenges } from '../src/content.js';
 
 const select = model => model.nodes.map(n => n.id);
+test('discarding an unwanted sugar preserves other molecules, water and node identities', () => {
+  const before = preset('carbs', ['glucose', 'fructose', 'galactose']);
+  before.water = 3;
+  const copy = clone(before);
+  const after = discardMolecules(before, [before.nodes[1].id]);
+  assert.deepEqual(before, copy);
+  assert.deepEqual(after.nodes, [before.nodes[0], before.nodes[2]]);
+  assert.equal(after.water, 3);
+  assert.equal(after.nextId, before.nextId);
+  assert.equal(discardMolecules(before, ['missing']), before);
+});
+test('discarding one connected piece removes its entire molecule without a chemical reaction', () => {
+  for (const module of Object.keys(initialModels())) {
+    const original = initialModels()[module];
+    const joined = join(original, select(original), module).model;
+    const extraType = TYPES[module][0];
+    const before = addNode(joined, extraType, module);
+    const copy = clone(before);
+    const after = discardMolecules(before, [before.nodes[0].id]);
+    assert.deepEqual(after.nodes, before.nodes.slice(-1));
+    assert.deepEqual(after.edges, []);
+    for (const key of ['water', 'released', 'used', 'nextId']) assert.equal(after[key], before[key]);
+    assert.deepEqual(before, copy);
+    assert.equal(discardMolecules(after, select(after)).nodes.length, 0);
+  }
+});
 for (const [other, product] of [['glucose', 'maltose'], ['fructose', 'sucrose'], ['galactose', 'lactose']]) {
   for (const reversed of [false, true]) {
     test(`${product}: ${reversed ? 'reversed' : 'forward'} order; water and reversible identities`, () => {
