@@ -1,14 +1,341 @@
 <!doctype html>
 <html lang="zh-Hant">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#235d46" />
-    <meta name="description" content="Explore condensation and hydrolysis with an interactive bilingual biology molecular workbench." />
-    <title>分子實驗室 · Molecule Lab</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123d35">
+<meta name="description" content="可離線使用的中四生物教師示範：酶、水解與香蕉成熟。">
+<title>香蕉成熟、酶與碳水化合物的水解</title>
+<style>
+:root{color-scheme:light;--ink:#173c34;--muted:#4b665e;--paper:#f5f5eb;--line:#d4ded4;--green:#185747;--gold:#f2ca55;--rose:#eaa18f;--blue:#12698b;--purple:#7661a4;font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}button,input{font:inherit}button{cursor:pointer;color:inherit}button:disabled{cursor:default;opacity:.48}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #d77719;outline-offset:4px}button{border:1px solid var(--line);background:#fffef8;border-radius:10px;min-height:44px}h1,h2,h3,p,figure{margin:0}svg{display:block}button svg{width:20px;height:20px;flex-shrink:0}a{color:#195c4b;text-underline-offset:3px}[hidden]{display:none!important}
+.projector{height:100svh;min-height:730px;max-width:1640px;margin:auto;padding:18px 28px;display:flex;flex-direction:column;gap:12px}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:750;letter-spacing:.08em}.brand-mark{width:32px;height:32px;background:var(--green);border-radius:9px;color:#fff;display:grid;place-items:center}.brand-mark svg{width:24px;height:24px}.top-actions{display:flex;align-items:center;gap:10px}.language{display:flex;padding:3px;background:#e7ece2;border-radius:9px}.language button{border:0;min-height:36px;padding:5px 12px;background:transparent;font-size:15px}.language button[aria-pressed=true]{background:#fff;color:var(--green);box-shadow:0 1px 3px #173c3420}.fullscreen{display:flex;gap:7px;align-items:center;padding:7px 10px;font-size:14px;min-height:40px}
+.hero h1{font-size:clamp(27px,2.5vw,38px);font-weight:780;line-height:1.3;letter-spacing:.01em}.hero p{font-size:16px;color:var(--muted);margin-top:5px}[lang=en] .hero h1{font-size:clamp(25px,2.2vw,34px)}
+.modebar{display:flex;align-items:center;justify-content:space-between;gap:12px}.modes{display:flex;gap:5px;background:#e7ece2;padding:4px;border-radius:12px}.modes button{display:flex;align-items:center;gap:10px;padding:8px 20px;min-height:44px;background:transparent;border-color:transparent;font-size:20px;font-weight:700}.modes button[aria-pressed=true]{background:var(--green);color:white}.mode-letter{font-size:13px;display:grid;place-items:center;width:24px;height:24px;border:1px solid currentColor;border-radius:50%;opacity:.85}.sequence{padding:10px 16px;display:flex;gap:9px;align-items:center;font-size:17px;font-weight:700}.sequence[aria-pressed=true]{background:#fff0c7;border-color:#b58b24}.duration{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
+.reaction-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.reaction-picker button{padding:9px 14px;display:flex;align-items:center;gap:12px;font-size:20px;text-align:left;font-weight:650}.reaction-picker button[aria-pressed=true]{border:2px solid var(--green);background:#e9f1e3;padding:8px 13px}.tab-number{font-size:13px;font-weight:700;opacity:.7}.mini-symbol{width:40px;height:30px;margin-left:auto;flex-shrink:0}
+.lesson{flex:1;min-height:0;display:flex;flex-direction:column;background:#fffef9;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 22px #173c3405;overflow:visible}.scene-heading{padding:14px 22px 10px;display:flex;gap:14px;align-items:center;justify-content:space-between}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.12em;color:#536d5f}.scene-heading h2{font-size:clamp(23px,2vw,30px);line-height:1.35;margin-top:3px}.phase-pill{display:flex;align-items:center;gap:8px;font-size:15px;color:#476159;white-space:nowrap}.phase-dot{height:8px;width:8px;border-radius:50%;background:#b68724}.scene{position:relative;flex:1;min-height:235px;overflow:hidden;background-image:radial-gradient(#c9d7c24d 1px,transparent 1px);background-size:20px 20px;margin:0 12px;border:1px solid #e4e8dc;border-radius:10px}.scene svg{height:100%;width:100%;position:absolute;inset:0;overflow:visible}.scene text{font-family:inherit}.molecule-name{font-size:28px;font-weight:700;fill:#173c34}.small-label{font-size:23px;fill:#36594d}.scene-label{font-size:24px;font-weight:700;fill:#456457}.enzyme-name{fill:white;font-size:30px;font-weight:750}.enzyme-note{font-size:21px;fill:#4f4070}.water-name{font-size:26px;fill:#12698b;font-weight:750}.cycle-tag{font-size:21px;fill:#526c60}.bond{stroke:#536d5b;stroke-width:6;stroke-linecap:round}.target-bond{stroke:#b25a13;stroke-width:9}.bond-target{fill:#fff3c07a;stroke:#b25a13;stroke-width:3;stroke-dasharray:5 4}.water-path{stroke:#12698b;stroke-width:3;stroke-dasharray:6 5;fill:none}.product-group{font-size:23px;fill:#36594d}.unit text{pointer-events:none}.legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:8px 22px;color:#3b5c4e;font-size:14px}.legend span{display:flex;gap:6px;align-items:center}.legend svg{width:29px;height:27px}.legend .schematic{margin-left:auto;font-size:13px;color:#536c60}
+.equation{border-top:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;justify-content:center;gap:14px;min-height:80px;font-size:clamp(21px,2vw,29px);font-weight:700;text-align:center;flex-wrap:wrap}.equation .arrow{display:flex;flex-direction:column;align-items:center;min-width:135px;font-size:17px;color:#604c89;line-height:1.3}.equation .arrow svg{height:18px;width:135px;color:#604c89}.equation .pending{color:#697b70;font-size:22px}.equation .reactant-water{color:#12698b}.equation-foot{font-size:13px;line-height:1.4;font-weight:400;color:#4e675d;width:100%;margin-top:-5px}
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.primary{display:flex;align-items:center;justify-content:center;gap:10px;min-width:142px;padding:10px 22px;background:var(--green);color:white;border-color:var(--green);font-size:21px;font-weight:700}.secondary{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;font-size:18px}.timeline{flex:1;min-width:160px}.timeline-meta{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin-bottom:8px;color:#3d5f50}.progress{height:7px;border-radius:4px;background:#dde5d6;overflow:hidden}.progress-fill{height:100%;background:#547d52;width:0}.options{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px;color:#36594c}.options label{display:flex;gap:6px;align-items:center;cursor:pointer;min-height:40px}.options input{width:18px;height:18px;accent-color:var(--green)}
+.banana-note{padding:10px 20px;background:#faf0d7;border-top:1px solid #e7d6ad;font-size:17px;line-height:1.5;color:#584a27}.review{padding:12px 20px;border-top:1px solid var(--line);background:#edf3e8}.review-questions{display:flex;gap:14px;align-items:center;justify-content:space-between}.review-questions p{font-size:20px;line-height:1.5;font-weight:650}.review button{padding:9px 15px;font-size:17px;white-space:nowrap}.summary-text{font-size:21px;line-height:1.55;padding-top:10px;color:#174f3a;font-weight:700}.observation-note{font-size:15px;line-height:1.5;color:#456153;margin-top:8px}.banana-complete .scene{min-height:190px}.banana-status{padding:10px 22px;font-size:20px;font-weight:700;display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line)}
+.teacher-notes{max-width:1584px;margin:10px auto 30px;padding:0 28px}.teacher-notes details{border-top:1px solid #cbd7c8;padding-top:14px}.teacher-notes summary{cursor:pointer;font-size:17px;font-weight:700;min-height:40px}.notes-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:32px;line-height:1.75;font-size:16px;background:#fffef7;border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:8px}.notes-grid h3{font-size:19px;margin-bottom:8px}.notes-grid ul,.notes-grid ol{margin:6px 0;padding-left:23px}.notes-grid li{margin-bottom:9px}.sources{margin-top:18px}.sources a{overflow-wrap:anywhere}.offline{font-size:14px;color:#496656;margin-top:12px}.status-message{font-size:14px;color:#5e4a2d}.icon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(min-width:1000px) and (max-height:780px){.projector{gap:8px;padding:12px 24px;min-height:700px}.hero h1{font-size:29px}.hero p{font-size:14px}.scene-heading{padding:10px 20px 6px}.reaction-picker button{font-size:18px;min-height:44px}.modes button{font-size:18px;padding:6px 18px}.equation{min-height:73px;padding:8px 18px}.primary{min-height:45px;padding:7px 18px}.secondary{padding:7px 14px}.legend{padding:6px 20px}}
+@media(max-width:999px){.projector{height:auto;min-height:100svh;padding:16px;gap:12px}.scene{flex:none;height:400px}.hero h1{font-size:29px}.top-actions{gap:6px}.fullscreen span{display:none}.modebar{flex-wrap:wrap}.modes{flex:1}.modes button{flex:1;padding:8px 12px;justify-content:center;font-size:19px}.sequence{font-size:16px}.controls{gap:10px}.timeline{order:3;flex-basis:100%}.options{margin-left:auto}.teacher-notes{padding:0 16px}.notes-grid{grid-template-columns:1fr}.banana-complete .scene{height:350px}.review-questions p{font-size:18px}.equation{font-size:24px}}
+@media(max-width:639px){.projector{padding:12px;gap:10px}.brand{font-size:12px;letter-spacing:0}.brand-mark{width:28px;height:28px}.topline{gap:8px}.language button{font-size:13px;padding:5px 9px}.fullscreen{padding:7px;min-width:38px}.hero h1,[lang=en] .hero h1{font-size:25px}.hero p{font-size:14px;line-height:1.5}.modes{width:100%;flex-basis:100%}.modes button{font-size:18px}.sequence{width:100%;justify-content:center}.reaction-picker{gap:5px}.reaction-picker button,.reaction-picker button[aria-pressed=true]{display:block;text-align:center;font-size:16px;padding:8px 4px;min-height:60px}.tab-number{display:block;margin-bottom:3px}.mini-symbol{display:none}.scene-heading{padding:12px 14px}.scene-heading h2{font-size:23px}.phase-pill{font-size:12px;gap:5px}.eyebrow{font-size:11px}.scene{height:auto;aspect-ratio:620/680;min-height:0;margin:0 6px}.scene svg{position:absolute}.legend{padding:8px 12px;font-size:12px;gap:10px}.legend .schematic{width:100%;margin:0;font-size:12px}.legend svg{width:25px;height:24px}.equation{padding:12px 10px;gap:9px;font-size:22px;line-height:1.4}.equation .arrow{min-width:95px;font-size:16px}.equation .arrow svg{width:95px}.equation .pending{font-size:19px}.equation-foot{font-size:12px;margin:0}.primary{flex:1;font-size:20px;min-width:120px}.secondary{font-size:17px}.options{width:100%;margin:0;justify-content:space-between;font-size:13px;gap:8px}.timeline{order:0;flex-basis:100%}.banana-note{font-size:15px;padding:10px 13px}.review{padding:12px}.review-questions{display:block}.review-questions p{font-size:18px}.review button{margin-top:12px}.summary-text{font-size:19px}.observation-note{font-size:14px}.banana-status{font-size:17px;padding:12px;flex-wrap:wrap;gap:6px}.banana-complete .scene{height:auto;min-height:0}.notes-grid{padding:18px;gap:18px}.teacher-notes{padding:0 12px}.teacher-notes summary{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+@media print{.projector{height:auto}.scene{height:380px}.controls,.top-actions,.modebar,.reaction-picker{display:none}.teacher-notes details{display:block}}
+@media(max-width:639px){.scene.banana-scene{aspect-ratio:620/950}}
+
+.navigation-grid{display:grid;grid-template-columns:310px 1fr;gap:12px;align-items:stretch}
+.navigation-grid .modes{height:100%;width:100%}.navigation-grid .modes button{flex:1;justify-content:center;padding:7px 10px;white-space:nowrap}
+.controls .sequence{font-size:16px;padding:10px 12px}.controls .sequence .duration{font-size:12px}
+.banana-context-note{font-size:18px;fill:#36594d}
+@media(min-width:1000px){.hero p{display:none}.hero h1{font-size:30px}.projector{gap:10px}.scene-heading{padding:12px 22px 8px}.legend{padding:6px 22px}.equation{min-height:77px;padding:8px 22px}.controls{gap:10px}.options{gap:10px;font-size:13px}.primary{min-width:125px}.secondary{padding:10px 13px}}
+@media(max-width:999px){.navigation-grid{grid-template-columns:1fr}.controls .sequence{width:auto}.controls .timeline{order:3}.controls .options{order:2}}
+@media(max-width:639px){.controls .sequence{width:100%}.controls .timeline{order:0}.controls .options{order:0}.navigation-grid{gap:10px}.navigation-grid .modes button{padding:8px 12px}}
+</style>
+</head>
+<body>
+<div class="projector" id="projector">
+  <header class="topline">
+    <div class="brand"><span class="brand-mark"><svg viewBox="0 0 30 30" aria-hidden="true"><path d="M7 23C3 12 13 5 24 5c0 13-6 22-17 18Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7 23 13-13" stroke="currentColor" stroke-width="2"/></svg></span><span data-t="brand"></span></div>
+    <div class="top-actions"><button class="fullscreen" id="fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span id="fullscreenLabel"></span></button><div class="language" role="group" data-aria="language"><button id="zh" lang="zh-Hant" aria-pressed="true">繁中</button><button id="en" lang="en" aria-pressed="false">English</button></div></div>
+  </header>
+  <div class="hero"><h1 data-t="title"></h1><p data-t="subtitle"></p></div>
+  <div class="navigation-grid">
+  <nav class="modebar" data-aria="modeSelection">
+    <div class="modes"><button id="modeA" aria-pressed="true"><span class="mode-letter">A</span><span data-t="modeA"></span></button><button id="modeB" aria-pressed="false"><span class="mode-letter">B</span><span data-t="modeB"></span></button></div>
+  </nav>
+  <div class="reaction-picker" id="reactionPicker" role="group" data-aria="reactionSelection">
+    <button data-reaction="starch" aria-pressed="true"><span class="tab-number">01</span><span data-t="starchHydrolysis"></span><svg class="mini-symbol" viewBox="0 0 70 40" aria-hidden="true"><path d="M10 20h50" stroke="#49634d" stroke-width="3"/><path d="m3 20 7-12h14l7 12-7 12H10Z" fill="#f2ca55" stroke="#8b651a"/><path d="m30 20 7-12h14l7 12-7 12H37Z" fill="#f2ca55" stroke="#8b651a"/></svg></button>
+    <button data-reaction="maltose" aria-pressed="false"><span class="tab-number">02</span><span data-t="maltoseHydrolysis"></span></button>
+    <button data-reaction="sucrose" aria-pressed="false"><span class="tab-number">03</span><span data-t="sucroseHydrolysis"></span></button>
+  </div>
+  </div>
+  <main class="lesson" id="lesson">
+    <div class="scene-heading"><div><div class="eyebrow" id="sceneEyebrow"></div><h2 id="stageCaption" aria-live="polite"></h2></div><div class="phase-pill"><span class="phase-dot"></span><span id="phaseLabel"></span></div></div>
+    <figure class="scene" id="scene"><svg id="diagram" role="img" aria-labelledby="diagramTitle diagramDescription"></svg></figure>
+    <div class="legend" id="legend"></div>
+    <div class="equation" id="equation" aria-live="polite"></div>
+    <div class="banana-status" id="bananaStatus" hidden><span data-t="starchTrend"></span><span data-t="sugarTrend"></span></div>
+    <div class="banana-note" id="bananaNote" data-t="bananaDisclaimer" hidden></div>
+    <section class="review" id="review" hidden data-aria="reflection">
+      <div class="review-questions"><div><p data-t="question1"></p><p data-t="question2"></p></div><button id="showSummary" data-t="showSummary"></button></div>
+      <p class="summary-text" id="summaryText" data-t="summary" hidden></p><p class="observation-note" data-t="observationLimit"></p>
+    </section>
+  </main>
+  <div class="controls">
+    <button class="primary" id="play"><svg class="icon" id="playIcon" viewBox="0 0 24 24" aria-hidden="true"></svg><span id="playLabel"></span></button>
+    <button class="secondary" id="replay"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg><span data-t="replay"></span></button>
+    <button class="sequence" id="sequence" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 5 8 7-8 7V5Zm9 0 8 7-8 7V5Z"/></svg><span id="sequenceLabel"></span><span class="duration" id="sequenceDuration"></span></button>
+    <div class="timeline"><div class="timeline-meta"><span id="progressLabel"></span><span id="ledger"></span></div><div class="progress" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-aria="progress"><div class="progress-fill" id="progressFill"></div></div></div>
+    <div class="options"><label id="enzymeOption"><input type="checkbox" id="enzymeToggle"><span data-t="showEnzyme"></span></label><label><input type="checkbox" id="motionToggle"><span data-t="reducedMotion"></span></label></div>
+  </div>
+  <p class="status-message" id="statusMessage" role="status" hidden></p>
+</div>
+<footer class="teacher-notes">
+  <details id="modelNotes"><summary data-t="modelNotes"></summary><div class="notes-grid">
+    <section><h3 data-t="teacherGuide"></h3><ol><li data-t="guide1"></li><li data-t="guide2"></li><li data-t="guide3"></li><li data-t="guide4"></li></ol><p class="offline" data-t="offline"></p></section>
+    <section><h3 data-t="modelLimits"></h3><ul><li data-t="symbolsNote"></li><li data-t="waterNote"></li><li data-t="starchNote"></li><li data-t="enzymeScope"></li><li data-t="bananaScope"></li><li data-t="observationNote"></li><li data-t="notData"></li></ul>
+      <h3 class="sources" data-t="sources"></h3><ul><li><a href="https://doi.org/10.1016/S0031-9422(97)00931-X" target="_blank" rel="noopener">Prabha &amp; Bhagyalakshmi (1998). <i>Carbohydrate metabolism in ripening banana fruit.</i></a><p data-t="paperUse"></p></li><li><span data-t="enzymeSources"></span> <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/1.html" target="_blank" rel="noopener">EC 3.2.1.1</a> · <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/20.html" target="_blank" rel="noopener">EC 3.2.1.20</a> · <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/48.html" target="_blank" rel="noopener">EC 3.2.1.48</a><p data-t="ecCaution"></p></li></ul>
+    </section>
+  </div></details>
+</footer>
+<script>
+'use strict';
+(() => {
+const words = {
+brand:['中四 CMI 生物 · 教師示範','FORM 4 CMI BIOLOGY · TEACHER DEMONSTRATION'],
+title:['香蕉成熟、酶與碳水化合物的水解','Banana Ripening, Enzymes and Carbohydrate Hydrolysis'],
+subtitle:['從香蕉實驗出發，追蹤酶、水與化學鍵。','From the banana experiment to enzymes, water and chemical bonds.'],
+language:['語言','Language'],modeSelection:['示範模式','Demonstration mode'],reactionSelection:['選擇水解反應','Choose a hydrolysis reaction'],
+modeA:['水解反應','Hydrolysis'],modeB:['香蕉成熟','Banana ripening'],sequence:['課堂連續示範','Continuous demonstration'],stopSequence:['停止連續示範','Stop continuous demonstration'],sequenceTime:['約 66 秒','About 66 s'],
+starchHydrolysis:['澱粉水解','Starch hydrolysis'],maltoseHydrolysis:['麥芽糖水解','Maltose hydrolysis'],sucroseHydrolysis:['蔗糖水解','Sucrose hydrolysis'],
+starch:['澱粉','Starch'],maltose:['麥芽糖','Maltose'],sucrose:['蔗糖','Sucrose'],glucose:['葡萄糖','Glucose'],fructose:['果糖','Fructose'],water:['水','Water'],enzyme:['酶','Enzyme'],substrate:['底物','Substrate'],product:['產物','Product'],
+amylase:['澱粉酶','Amylase'],maltase:['麥芽糖酶','Maltase'],sucrase:['蔗糖酶','Sucrase'],
+askEnzyme:['這項反應需要哪種酶？','Which enzyme does this reaction need?'],contact:['底物與合適的酶接觸','The substrate contacts a suitable enzyme'],waterAction:['水參與水解','Water takes part in hydrolysis'],breakAction:['相關化學鍵斷開，產物離開酶','The bond breaks; products leave the enzyme'],reuse:['酶可再次催化反應','The enzyme can catalyse another reaction'],secondWater:['另一個水分子參與再次水解','Another water molecule joins the next hydrolysis'],finished:['酶沒有被消耗，可再次使用','The enzyme is unchanged and can be reused'],
+before:['反應前','Before reaction'],catalysis:['催化','Catalysis'],waterStage:['水參與','Water participates'],productsStage:['產物分開','Products separate'],reuseStage:['酶重用','Enzyme reuse'],complete:['反應結束','Complete'],
+simplified:['課程簡化模型','Simplified curriculum model'],hydrolysisExample:['酶催化的水解','ENZYME-CATALYSED HYDROLYSIS'],unknownProduct:['產物待揭示','Products to be revealed'],predict:['先口頭預測，再按播放。','Predict aloud, then press Play.'],
+shorterStarch:['較短澱粉鏈','Shorter starch chain'],firstCycle:['第一次催化','First catalytic cycle'],secondCycle:['第二次催化','Second catalytic cycle'],sameEnzyme:['同一個酶 · 未被消耗','Same enzyme · not consumed'],activeSite:['接觸位置（示意）','Contact site (schematic)'],
+twoGlucose:['兩個葡萄糖','Two glucose molecules'],oneEach:['葡萄糖 ＋ 果糖','Glucose + fructose'],equationNote:['反應式表示每一次水解；圖中用另一個底物示範酶重用。','The equation shows one hydrolysis event; a second substrate demonstrates enzyme reuse.'],starchEquationNote:['以選定位置形成麥芽糖；圖中亦保留較短澱粉鏈。','A selected cleavage releases maltose; the shorter starch chain remains visible.'],
+schematic:['符號示意，非精確化學結構','Conceptual symbols, not precise chemical structures'],play:['播放','Play'],pause:['暫停','Pause'],continue:['繼續','Continue'],replay:['重播','Replay'],showEnzyme:['顯示酶名稱','Show enzyme name'],reducedMotion:['減少動態效果','Reduced motion'],enterFullscreen:['全螢幕','Full screen'],exitFullscreen:['離開全螢幕','Exit full screen'],fullscreenUnavailable:['此瀏覽器未能開啟全螢幕；可使用瀏覽器的全螢幕功能。','Full screen is unavailable here; use your browser’s full-screen command.'],progress:['示範進度','Demonstration progress'],manual:['手動示範','Manual demonstration'],sequenceProgress:['連續示範','Continuous demonstration'],bondsBroken:['斷鍵','Bonds broken'],watersUsed:['參與的水','Water used'],
+bananaEyebrow:['從模型回看香蕉實驗','FROM MODEL TO BANANA EXPERIMENT'],bananaStart:['未成熟香蕉已有少量糖','Unripe bananas already contain some sugar'],bananaChanging:['澱粉減少；多步轉化令糖累積','Starch decreases; multistep conversions build up sugars'],bananaEnd:['成熟後：較少澱粉，較多可溶性糖','Ripe: less starch, more soluble sugars'],unripe:['未成熟','Unripe'],ripening:['成熟中','Ripening'],ripe:['成熟','Ripe'],bananaContext:['香蕉情境示意','Banana context (schematic)'],cells:['果肉細胞示意','Pulp cells (schematic)'],granules:['澱粉顆粒','Starch granules'],solubleSugars:['可溶性糖','Soluble sugars'],molecularView:['分子層次示意','Molecular-level model'],notMicroscope:['不是顯微鏡影像','Not a microscope image'],multistep:['多種酶參與的多步轉化','Multistep conversion involving many enzymes'],notDataShort:['數量只表示趨勢，並非實測比例','Counts show trends, not measured proportions'],starchTrend:['部分澱粉顆粒減少，仍可保留少量澱粉','Some granules decrease; some starch may remain'],sugarTrend:['可溶性糖逐漸累積','Soluble sugars gradually accumulate'],bananaDisclaimer:['剛才的三組水解反應是學習例子；香蕉成熟的糖轉化還涉及其他反應，並非完整途徑。','The three hydrolysis reactions are learning examples. Sugar conversion in ripening bananas involves other reactions; this is not the complete pathway.'],
+reflection:['連繫你的實驗','Connect to your experiment'],question1:['回看你的繪圖：澱粉顆粒有甚麼差異？','Look back at your drawings: how do the starch granules differ?'],question2:['哪些是你直接觀察到的？哪些是模型幫助你解釋的？','What did you observe directly, and what does the model help explain?'],showSummary:['顯示總結','Show summary'],hideSummary:['隱藏總結','Hide summary'],summary:['香蕉成熟時，部分澱粉被分解，並經多種酶參與的轉化形成可溶性糖，與甜度增加有關。','As bananas ripen, some starch is broken down and converted into soluble sugars through processes involving many enzymes, contributing to increased sweetness.'],observationLimit:['本次光學顯微鏡觀察沒有直接顯示酶、水解反應或糖分子，也沒有直接量度糖含量。','This light-microscope observation did not directly show enzymes, hydrolysis or sugar molecules, and did not directly measure sugar content.'],
+modelNotes:['模型說明、科學來源與教師操作','Model notes, scientific sources and teacher guide'],teacherGuide:['3–4 分鐘教師操作','A 3–4 minute teacher guide'],guide1:['配合 PPT 第 16–17 頁：選一組水解反應，先問學生需要哪種酶；可勾選「顯示酶名稱」揭示答案。','Alongside PPT slides 16–17, select a reaction and ask which enzyme is needed. Use “Show enzyme name” to reveal it.'],guide2:['按播放，指出酶與底物接觸、水參與及斷鍵；再指出同一個酶對另一底物再次催化。每組約 14 秒。','Play and point out contact, water participation and bond cleavage. Then identify the same enzyme catalysing a second substrate. Each example lasts about 14 seconds.'],guide3:['切換「香蕉成熟」，播放約 24 秒的整體模型，回看學生的碘液染色及顯微鏡繪圖；最後按「顯示總結」。','Switch to Banana ripening for the 24-second overview. Revisit students’ iodine-staining and microscope drawings, then select “Show summary”.'],guide4:['「課堂連續示範」依次播放三組水解及香蕉成熟，合共約 66 秒。暫停可留作講解；手動選反應會停止連續示範。','Continuous demonstration plays all three reactions, then ripening, in about 66 seconds. Pause to discuss. Selecting a reaction manually stops the sequence.'],offline:['此單一 HTML 可直接離線開啟，毋須登入或安裝。科學來源連結需連網。','Open this single HTML file offline; no sign-in or installation is needed. Source links require an internet connection.'],modelLimits:['主要簡化與界限','Main simplifications and limits'],symbolsNote:['葡萄糖用六角形，果糖用五角形；顏色、形狀及酶的接觸位置均是概念示意，不代表分子真實外觀或精確蛋白質結構。','Glucose is a hexagon and fructose a pentagon. Colours, shapes and enzyme contact sites are conceptual, not actual molecular appearances or precise protein structures.'],waterNote:['每次演示斷一個鍵，使用一個水分子。水移近鍵後不再以完整水分子出現於產物。本模型不繪畫 H／OH 的原子級接合。','Each demonstrated cleavage uses one water molecule. After approaching the bond, that intact water molecule is absent from the products. Atomic H/OH attachment is not modelled.'],starchNote:['此處以形成麥芽糖示範本課反應；實際澱粉分解涉及不同酶及其他中間產物。每次演示從一段六單位鏈釋出一段雙單位麥芽糖，保留四單位較短鏈。','Maltose formation illustrates the lesson reaction; real starch breakdown involves different enzymes and other intermediates. Each example releases a two-unit maltose fragment from a six-unit segment, leaving a four-unit chain.'],enzymeScope:['本課配對指出所示反應的合適酶，不是「任何酶只能作用於一種物質」的規則。不同來源的酶可能有較廣的底物範圍。','The pairings identify suitable enzymes for these examples, not a rule that every enzyme acts on only one substance. Enzymes from different sources may have broader substrate ranges.'],bananaScope:['香蕉模式表示多種酶參與的多步轉化，不把澱粉直接切成果糖或蔗糖，不以蔗糖酶把葡萄糖直接合成蔗糖，也不限定只有三種酶參與。','Ripening represents multistep conversion involving many enzymes. It does not directly cut starch into fructose or sucrose, use sucrase to synthesise sucrose from glucose, or limit the process to three enzymes.'],observationNote:['未提供真實顯微鏡照片；細胞與澱粉顆粒圖全部明確標示為示意。糖分子另放於分子層次面板；碘液不是模型中的分解或成熟原因。','No actual micrographs were supplied. Cell and granule drawings are explicitly schematic; sugars appear in a separate molecular-level panel. Iodine is not a cause of breakdown or ripening in this model.'],notData:['粒子數量、大小與動畫速度只表示概念趨勢，不是實測數據，不表示固定比例、濃度、克數或成熟天數。未成熟香蕉已有少量糖，成熟狀態仍保留少量澱粉。','Particle counts, sizes and animation speed indicate conceptual trends, not measurements, fixed proportions, concentrations, masses or ripening days. Some sugar is present initially and some starch remains at the end.'],sources:['科學來源','Scientific sources'],paperUse:['用作香蕉成熟時碳水化合物轉化及多種酶參與的背景依據。','Background for carbohydrate conversion and the involvement of multiple enzymes during banana ripening.'],enzymeSources:['IUBMB 酶命名：','IUBMB Enzyme Nomenclature:'],ecCaution:['EC 3.2.1.48 條目亦記載麥芽糖水解；不能以簡單全配對表把底物範圍絕對化。該條目不是香蕉酶身分的證據，亦不表示不同來源的蔗糖水解酶是同一種酶。','EC 3.2.1.48 also lists maltose hydrolysis, so a simple all-pairs rejection table would be misleading. This entry does not identify banana enzymes or establish that sucrose-hydrolysing enzymes from different sources are identical.'],
+diagramA:['酶、水及水解的動態概念模型','Animated conceptual model of enzymes, water and hydrolysis'],diagramADesc:['底物移近同一個酶，水移近選定的鍵；斷鍵後產物分開，另一底物再與同一個酶反應。','A substrate approaches one enzyme, water approaches a selected bond, products separate after cleavage, and another substrate reacts with the same enzyme.'],diagramB:['香蕉成熟的細胞及分子層次示意','Schematic cellular and molecular views of banana ripening'],diagramBDesc:['果肉細胞的部分澱粉顆粒減小；經多種酶參與的多步轉化，可溶性糖逐漸累積。糖分子不是顯微鏡影像。','Some starch granules in pulp cells shrink; multistep conversions involving many enzymes accompany accumulating soluble sugars. Sugar molecules are not microscope images.']
+};
+const $ = id => document.getElementById(id);
+const reactions = {starch:{enzyme:'amylase',n:6,cut:3,title:'starchHydrolysis'},maltose:{enzyme:'maltase',n:2,cut:0,title:'maltoseHydrolysis'},sucrose:{enzyme:'sucrase',n:2,cut:0,title:'sucroseHydrolysis'}};
+const order=['starch','maltose','sucrose','banana'];
+const state={lang:'zh',mode:'hydrolysis',reaction:'starch',elapsed:0,running:false,sequence:false,sequenceIndex:0,enzymeVisible:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,summary:false};
+let rafId=null,lastNow=0,cache={},equationKey='',mobile=matchMedia('(max-width:639px)').matches;
+const t=key => words[key]?.[state.lang==='zh'?0:1] ?? key;
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
+const mix=(a,b,p)=>a+(b-a)*p;
+const duration=()=>state.mode==='banana'?24:14;
+const part=(p,a,b)=>state.reduced?(p>=a?1:0):smooth((p-a)/(b-a));
+function text(id,value){const el=$(id);if(el&&el.textContent!==value)el.textContent=value;}
+function attr(el,key,value){if(el&&el.getAttribute(key)!==String(value))el.setAttribute(key,value);}
+function visible(el,show){if(el)el.style.display=show?'':'none';}
+function node(type,id,x=0,y=0,scale=1){
+  const shape=type==='fructose'?'<path d="M0 -29 29 -9 18 25H-18L-29 -9Z" fill="#eaa18f" stroke="#904c41" stroke-width="2.5"/>':'<path d="M-31 0 -15.5 -27H15.5L31 0 15.5 27H-15.5Z" fill="#f2ca55" stroke="#8b651a" stroke-width="2.5"/>';
+  return `<g ${id?`id="${id}"`:''} class="unit unit-${type}" data-substance="${type}" transform="translate(${x} ${y}) scale(${scale})">${shape}<text y="8" text-anchor="middle" fill="${type==='fructose'?'#783f37':'#684c19'}" font-size="25" font-weight="750">${type==='fructose'?'F':'G'}</text></g>`;
+}
+function water(id){return `<g id="${id}" data-molecule="water"><rect x="-37" y="-33" width="74" height="81" rx="15" fill="#f0f9fc" stroke="#12698b" stroke-width="2"/><path d="M-20 -15 0 0 20 -15" stroke="#12698b" stroke-width="5" fill="none"/><circle r="15" fill="#247ea3"/><text y="6" text-anchor="middle" fill="white" font-size="18" font-weight="700">O</text>${[-20,20].map(x=>`<circle cx="${x}" cy="-15" r="10" fill="white" stroke="#12698b" stroke-width="2"/><text x="${x}" y="-11" text-anchor="middle" fill="#12698b" font-size="12" font-weight="700">H</text>`).join('')}<text class="water-name" text-anchor="middle" y="38">H₂O</text></g>`;}
+function titleMarkup(a,b){return `<title id="diagramTitle">${t(a)}</title><desc id="diagramDescription">${t(b)}</desc>`;}
+function buildHydrolysis(){
+  const r=reactions[state.reaction],ex=mobile?-200:0,ey=mobile?150:0;
+  const enzyme=`<g id="enzymeModel" data-enzyme="${r.enzyme}" transform="translate(${ex} ${ey})"><path id="enzymeBody" d="M375 268C335 274 332 332 357 360C370 415 446 430 496 409C553 444 647 411 661 356C693 311 665 268 626 265L559 265Q548 307 510 307Q472 307 461 265Z" fill="#7661a4" stroke="#514173" stroke-width="3"/><path d="M461 265Q472 307 510 307Q548 307 559 265" stroke="#d5c9eb" stroke-width="5" fill="none"/><text id="enzymeName" class="enzyme-name" x="510" y="366" text-anchor="middle"></text><text id="enzymeReuse" class="enzyme-note" x="510" y="453" text-anchor="middle"></text></g>`;
+  let cycles='';
+  for(let c=0;c<2;c++){
+    const units=Array.from({length:r.n},(_,i)=>node(state.reaction==='sucrose'&&i===1?'fructose':'glucose',`c${c}n${i}`)).join('');
+    const bonds=Array.from({length:r.n-1},(_,i)=>`<line id="c${c}b${i}" class="bond ${i===r.cut?'target-bond':''}" data-selected-bond="${i===r.cut}"/>`).join('');
+    cycles+=`<g id="cycle${c}" data-cycle="${c+1}"><g>${bonds}</g>${units}<circle id="c${c}target" class="bond-target" r="25"/><path id="c${c}waterPath" class="water-path" marker-end="url(#waterArrow)"/>${water(`c${c}water`)}<text id="c${c}substrate" class="molecule-name" text-anchor="middle"></text><g id="c${c}products"><text id="c${c}productLeft" class="molecule-name" text-anchor="middle"></text><text id="c${c}productRight" class="molecule-name" text-anchor="middle"></text><text id="c${c}cycleLabel" class="cycle-tag" text-anchor="middle"></text></g></g>`;
+  }
+  $('diagram').setAttribute('viewBox',mobile?'0 0 620 680':'0 0 1060 480');
+  $('diagram').innerHTML=titleMarkup('diagramA','diagramADesc')+`<defs><marker id="waterArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#12698b"/></marker></defs><text id="substrateZone" class="scene-label" x="${mobile?75:80}" y="${mobile?35:46}"></text><text id="productZone" class="scene-label" x="${mobile?480:850}" y="${mobile?35:46}" text-anchor="middle"></text>${enzyme}${cycles}`;
+  // Persistent elements are updated in place; the same enzyme remains for both cycles.
+  cache={cycles:[0,1].map(c=>({group:$(`cycle${c}`),nodes:Array.from({length:r.n},(_,i)=>$(`c${c}n${i}`)),bonds:Array.from({length:r.n-1},(_,i)=>$(`c${c}b${i}`)),target:$(`c${c}target`),water:$(`c${c}water`),path:$(`c${c}waterPath`),substrate:$(`c${c}substrate`),products:$(`c${c}products`),left:$(`c${c}productLeft`),right:$(`c${c}productRight`),tag:$(`c${c}cycleLabel`)}))};
+}
+function hydrolysisSnapshot(p){
+  const r=reactions[state.reaction],targetX=mobile?310:510,targetY=mobile?410:260;
+  const spacing=mobile?74:84;
+  const cutOffset=(r.cut+.5-(r.n-1)/2)*spacing;
+  const contactCenter=targetX-cutOffset;
+  let consumed=0;
+  cache.cycles.forEach((c,index)=>{
+    const start=index===0?0:.56,contactStart=index===0?.12:.60,contactEnd=index===0?.26:.70,cutTime=index===0?.40:.82,exitEnd=index===0?.53:.94;
+    const shown=p>=start,broken=p>=cutTime;
+    visible(c.group,shown);
+    if(!shown)return;
+    if(broken)consumed++;
+    const approach=part(p,contactStart,contactEnd),leave=part(p,cutTime,exitEnd);
+    const entry=index===0?1:part(p,start,contactStart);
+    const initialY=mobile?(index===0?160:310):135;
+    const centerX=mix(mix(-220,250,entry),contactCenter,approach),centerY=mix(initialY,targetY,approach);
+    const rowY=mobile?(index===0?110:260):(index===0?120:310);
+    const leftCount=r.cut+1;
+    const leftCenter=mobile?(r.n===6?180:190):r.n===6?800:780;
+    const rightCenter=mobile?450:r.n===6?982:975;
+    const rightY=rowY;
+    const positions=c.nodes.map((n,i)=>{
+      const onLeft=i<=r.cut;
+      const finalX=onLeft?leftCenter+(i-(leftCount-1)/2)*(!mobile&&r.n===6?57:72):rightCenter+(i-r.cut-1-(r.n-leftCount-1)/2)*(!mobile&&r.n===6?60:84);
+      const finalY=onLeft?rowY:rightY;
+      const pos=[mix(centerX+(i-(r.n-1)/2)*spacing,finalX,leave),mix(centerY,finalY,leave)];
+      attr(n,'transform',`translate(${pos[0]} ${pos[1]}) scale(${mix(1,!mobile&&r.n===6?.75:1,leave)})`);
+      attr(n,'data-product',broken?(onLeft&&r.n===6?'starch':r.n===6?'maltose':state.reaction==='sucrose'&&i===1?'fructose':'glucose'):'');
+      return pos;
+    });
+    c.bonds.forEach((bond,i)=>{
+      visible(bond,!(broken&&i===r.cut));
+      for(const [key,v] of Object.entries({x1:positions[i][0],y1:positions[i][1],x2:positions[i+1][0],y2:positions[i+1][1]}))attr(bond,key,v);
+      attr(bond,'class',`bond ${i===r.cut&&p>=contactStart&&!broken?'target-bond':''}`);
+    });
+    const bondX=(positions[r.cut][0]+positions[r.cut+1][0])/2,bondY=(positions[r.cut][1]+positions[r.cut+1][1])/2;
+    visible(c.target,p>=contactStart&&!broken);attr(c.target,'cx',bondX);attr(c.target,'cy',bondY);
+    const waterStart=mobile?[525,320]:[640,95];
+    const waterProgress=part(p,contactEnd,cutTime);
+    // One new water molecule per cycle; it is absent after the bond is cleaved.
+    const q=1-waterProgress;
+    const waterX=q*q*waterStart[0]+2*q*waterProgress*(waterStart[0]-30)+waterProgress*waterProgress*bondX;
+    const waterY=q*q*waterStart[1]+2*q*waterProgress*(bondY-55)+waterProgress*waterProgress*bondY;
+    visible(c.water,!broken);attr(c.water,'transform',`translate(${waterX} ${waterY})`);
+    visible(c.path,p>=contactEnd&&!broken);attr(c.path,'d',`M${waterStart[0]} ${waterStart[1]} Q${waterStart[0]-30} ${bondY-55} ${bondX} ${bondY}`);
+    visible(c.substrate,!broken);attr(c.substrate,'x',centerX);attr(c.substrate,'y',centerY+mix(67,-56,approach));c.substrate.textContent=t(state.reaction);
+    visible(c.products,broken);attr(c.left,'x',leftCenter);attr(c.left,'y',rowY+56);c.left.textContent=t(r.n===6?'shorterStarch':'glucose');
+    attr(c.right,'x',rightCenter);attr(c.right,'y',rightY+56);c.right.textContent=t(r.n===6?'maltose':state.reaction==='sucrose'?'fructose':'glucose');
+    attr(c.tag,'x',mobile?310:875);attr(c.tag,'y',rowY-45);c.tag.textContent=t(index===0?'firstCycle':'secondCycle');
+    attr(c.group,'data-cleaved',broken);attr(c.water,'data-consumed',broken);
+  });
+  text('enzymeName',state.enzymeVisible?t(r.enzyme):`${t('enzyme')} ?`);
+  text('enzymeReuse',t(p>=.53?'sameEnzyme':'activeSite'));
+  text('substrateZone',t('substrate'));text('productZone',t('product'));
+  return consumed;
+}
+const grainPositions=[[353,146,19],[407,132,15],[465,165,24],[375,210,22],[443,232,17],[525,133,19],[582,165,23],[546,220,21],[608,237,14],[457,278,12]];
+function buildBanana(){
+  const compact=mobile;
+  $('diagram').setAttribute('viewBox',compact?'0 0 620 950':'0 0 1060 480');
+  const cellTransform=compact?'translate(-62 -32)':'translate(0 0)';
+  const bananaTransform=compact?'translate(5 35) scale(.65)':'translate(5 75)';
+  const sugarTransform=compact?'translate(-775 380) scale(1.25)':'translate(0 0)';
+  const granules=grainPositions.map(([x,y,r],i)=>`<g id="grain${i}" data-granule="${i}"><ellipse cx="0" cy="0" rx="${r}" ry="${r*.66}" fill="#b8b1ce" stroke="#675c80" stroke-width="2"/><ellipse cx="-3" cy="-2" rx="${r*.58}" ry="${r*.36}" fill="none" stroke="#817695" stroke-width="1.5"/></g>`).join('');
+  const sugars=Array.from({length:12},(_,i)=>{
+    const type=['glucose','fructose','sucrose'][i%3],col=i%3,row=Math.floor(i/3),x=745+col*105,y=138+row*60;
+    return `<g id="sugar${i}" data-sugar="${type}" transform="translate(${x} ${y})">${type==='sucrose'?`<line x1="-22" x2="22" y1="0" y2="0" class="bond"/>${node('glucose','',-22,0,.6)}${node('fructose','',22,0,.6)}`:node(type,'',0,0,.8)}</g>`;
+  }).join('');
+  $('diagram').innerHTML=titleMarkup('diagramB','diagramBDesc')+`
+    <g transform="${bananaTransform}"><path id="bananaPeel" d="M42 40Q105 173 231 16Q205 206 100 195Q34 173 42 40Z" fill="#8fa547" stroke="#5c722e" stroke-width="4"/><path d="M48 54Q106 193 225 32" fill="none" stroke="#fff5b0" stroke-width="7" opacity=".65"/><path d="m225 22 12-19m-195 39-7-15" stroke="#6c6338" stroke-width="12" stroke-linecap="round"/><g id="bananaSpots" fill="#81613d">${[[104,169],[160,144],[189,100],[78,147],[135,170]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="4" ry="6"/>`).join('')}</g><text id="bananaState" class="molecule-name" x="130" y="244" text-anchor="middle"></text><text class="banana-context-note" x="130" y="280" text-anchor="middle" data-t="bananaContext"></text></g>
+    <g transform="${cellTransform}"><text class="scene-label" x="472" y="59" text-anchor="middle" data-t="cells"></text><path d="M318 101Q308 96 307 121L309 278Q312 305 338 307L471 307Q496 304 495 280L492 119Q488 98 468 99Z" fill="#f0f0df" stroke="#56764f" stroke-width="5"/><path d="M503 98Q496 100 500 125L505 280Q507 305 529 306L627 306Q647 305 647 280L645 122Q645 99 623 98Z" fill="#f0f0df" stroke="#56764f" stroke-width="5"/>${granules}<text class="small-label" x="474" y="346" text-anchor="middle" data-t="granules"></text></g>
+    <g transform="${sugarTransform}"><rect x="698" y="85" width="340" height="258" rx="16" fill="#fff8e7" stroke="#bba66d" stroke-dasharray="7 5" stroke-width="2"/><text class="scene-label" x="869" y="48" text-anchor="middle" data-t="solubleSugars"></text><text class="small-label" x="869" y="77" text-anchor="middle" data-t="molecularView"></text>${sugars}<text class="small-label" x="869" y="374" text-anchor="middle" data-t="notMicroscope"></text></g>
+    <g><rect x="${compact?30:315}" y="${compact?330:390}" width="${compact?560:720}" height="${compact?70:54}" rx="14" fill="#e6eee2" stroke="#6c8c68" stroke-width="2"/><text id="multistepLabel" x="${compact?310:675}" y="${compact?357:425}" text-anchor="middle" fill="#244f38" font-size="${compact?26:25}" font-weight="750"></text>${compact?'<path d="M310 312v15m0 77v22" stroke="#597c53" stroke-width="3" stroke-dasharray="6 5"/>':'<path d="M480 364v24m410-23v22" stroke="#597c53" stroke-width="3" stroke-dasharray="6 5"/>'}</g><text class="small-label" x="${compact?310:530}" y="${compact?925:470}" text-anchor="middle" data-t="notDataShort"></text>`;
+  cache={grains:grainPositions.map((_,i)=>$(`grain${i}`)),sugars:Array.from({length:12},(_,i)=>$(`sugar${i}`))};
+  applyText();
+}
+function bananaSnapshot(p){
+  cache.grains.forEach((grain,i)=>{
+    const [x,y]=grainPositions[i],persistent=i===0||i===5||i===9;
+    const q=state.reduced?Math.floor(p*4)/4:p;
+    const amount=clamp((q-.08-i*.028)/.65);
+    const scale=persistent?mix(1,.45,amount):mix(1,0,amount);
+    attr(grain,'transform',`translate(${x} ${y}) scale(${scale})`);attr(grain,'data-remaining',scale>.05);visible(grain,scale>.015);
+  });
+  cache.sugars.forEach((sugar,i)=>{
+    const start=i<3?0:.13+(i-3)*.072;
+    const amount=i<3?1:state.reduced?(p>=start?1:0):smooth((p-start)/.09);
+    attr(sugar,'opacity',amount);attr(sugar,'data-visible',amount>.5);
+  });
+  const q=clamp(p/.84),colour=[mix(143,241,q),mix(165,201,q),mix(71,63,q)].map(Math.round);
+  attr($('bananaPeel'),'fill',`rgb(${colour.join(',')})`);attr($('bananaSpots'),'opacity',clamp((p-.5)*2));
+  text('bananaState',t(p<.15?'unripe':p<.88?'ripening':'ripe'));
+  if(mobile){
+    // Keep the long English process label within its own panel.
+    $('multistepLabel').innerHTML=state.lang==='zh'?'<tspan x="310" dy="0">多種酶參與的</tspan><tspan x="310" dy="32">多步轉化</tspan>':'<tspan x="310" dy="0">Many enzymes</tspan><tspan x="310" dy="32">Multistep conversion</tspan>';
+  }else text('multistepLabel',t('multistep'));
+}
+function applyText(){
+  document.documentElement.lang=state.lang==='zh'?'zh-Hant':'en';document.title=t('title');
+  document.querySelectorAll('[data-t]').forEach(el=>{const value=t(el.dataset.t);if(el.textContent!==value)el.textContent=value;});
+  document.querySelectorAll('[data-aria]').forEach(el=>attr(el,'aria-label',t(el.dataset.aria)));
+  attr($('zh'),'aria-pressed',state.lang==='zh');attr($('en'),'aria-pressed',state.lang==='en');
+  text('fullscreenLabel',t(document.fullscreenElement?'exitFullscreen':'enterFullscreen'));
+  text('diagramTitle',t(state.mode==='banana'?'diagramB':'diagramA'));text('diagramDescription',t(state.mode==='banana'?'diagramBDesc':'diagramADesc'));
+}
+function build(){
+  if(state.mode==='banana')buildBanana();else buildHydrolysis();
+  buildLegend();applyText();render();
+}
+function buildLegend(){
+  $('legend').innerHTML=['glucose','fructose'].map(type=>`<span><svg viewBox="-36 -32 72 64" aria-hidden="true">${node(type,'')}</svg><span>${t(type)}</span></span>`).join('')+(state.mode==='banana'?`<span><svg viewBox="-60 -32 120 64" aria-hidden="true"><line x1="-25" x2="25" class="bond"/>${node('glucose','',-25,0,.75)}${node('fructose','',25,0,.75)}</svg><span>${t('sucrose')}</span></span>`:'')+`<span class="schematic">${t(state.mode==='banana'?'notMicroscope':'schematic')}</span>`;
+}
+function equation(p){
+  if(state.mode==='banana')return;
+  const r=reactions[state.reaction],revealed=p>=.40;
+  const key=[state.lang,state.reaction,revealed,state.enzymeVisible].join(':');
+  if(key===equationKey)return;
+  equationKey=key;
+  const result=state.reaction==='starch'?t('maltose'):state.reaction==='maltose'?t('twoGlucose'):t('oneEach');
+  const markup=`<span>${t(state.reaction)}</span><span>＋</span><span class="reactant-water">${t('water')}</span><span class="arrow"><span>${state.enzymeVisible?t(r.enzyme):`${t('enzyme')} ?`}</span><svg viewBox="0 0 150 20" aria-hidden="true"><path d="M0 10h145m-12-8 12 8-12 8" fill="none" stroke="currentColor" stroke-width="2"/></svg></span><span class="${revealed?'':'pending'}" data-equation-product>${revealed?result:t('unknownProduct')}</span><span class="equation-foot">${t(state.reaction==='starch'?'starchEquationNote':'equationNote')}</span>`;
+  $('equation').innerHTML=markup;
+}
+function render(){
+  const p=clamp(state.elapsed/duration()),banana=state.mode==='banana',done=p>=1;
+  $('scene').classList.toggle('banana-scene',banana);
+  $('projector').classList.toggle('banana-complete',banana&&done);
+  $('reactionPicker').hidden=banana;$('equation').hidden=banana;$('bananaStatus').hidden=!banana;$('bananaNote').hidden=!banana;$('enzymeOption').hidden=banana;
+  $('review').hidden=!(banana&&done);$('summaryText').hidden=!state.summary;
+  text('showSummary',t(state.summary?'hideSummary':'showSummary'));
+  attr($('modeA'),'aria-pressed',!banana);attr($('modeB'),'aria-pressed',banana);
+  document.querySelectorAll('button[data-reaction]').forEach(el=>attr(el,'aria-pressed',el.dataset.reaction===state.reaction));
+  $('enzymeToggle').checked=state.enzymeVisible;$('motionToggle').checked=state.reduced;
+  attr($('sequence'),'aria-pressed',state.sequence);text('sequenceLabel',t(state.sequence?'stopSequence':'sequence'));text('sequenceDuration',t('sequenceTime'));
+  text('playLabel',t(state.running?'pause':state.elapsed>0&&!done?'continue':done?'replay':'play'));
+  const icon=state.running?'<path d="M7 4v16M17 4v16" stroke-width="4"/>':'<path d="m7 3 14 9-14 9V3Z" fill="currentColor" stroke="none"/>';
+  if($('playIcon').dataset.playing!==String(state.running)){
+    $('playIcon').innerHTML=icon;$('playIcon').dataset.playing=String(state.running);
+  }
+  $('progressFill').style.width=`${p*100}%`;attr($('progress'),'aria-valuenow',Math.round(p*100));
+  text('progressLabel',state.sequence?`${t('sequenceProgress')} ${state.sequenceIndex+1} / 4`:t('manual'));
+  if(banana){
+    bananaSnapshot(p);text('sceneEyebrow',t('bananaEyebrow'));text('stageCaption',t(p<.15?'bananaStart':done?'bananaEnd':'bananaChanging'));text('phaseLabel',t(done?'ripe':p<.15?'unripe':'ripening'));text('ledger',t('notDataShort'));
+  }else{
+    const used=hydrolysisSnapshot(p);
+    const phase=p<.12?0:p<.26?1:p<.40?2:p<.55?3:p<.94?4:5;
+    let caption=['askEnzyme','contact','waterAction','breakAction','reuse','finished'][phase];
+    if(p>=.70&&p<.82)caption='secondWater';
+    text('sceneEyebrow',t(state.reaction==='starch'?'simplified':'hydrolysisExample'));
+    text('stageCaption',t(caption));text('phaseLabel',`${phase+1} / 6 · ${t(['before','catalysis','waterStage','productsStage','reuseStage','complete'][phase])}`);
+    text('ledger',`${t('bondsBroken')} ${used} · ${t('watersUsed')} ${used}`);equation(p);
+  }
+  // Stable, language-neutral state for accessibility inspection and automated checks.
+  Object.assign($('lesson').dataset,{mode:state.mode,reaction:state.reaction,elapsed:state.elapsed.toFixed(3),playing:String(state.running),sequence:String(state.sequence),reduced:String(state.reduced)});
+}
+function cancelFrame(){if(rafId!==null)cancelAnimationFrame(rafId);rafId=null;}
+function setScene(item){state.mode=item==='banana'?'banana':'hydrolysis';if(item!=='banana')state.reaction=item;state.elapsed=0;state.summary=false;state.enzymeVisible=state.mode==='hydrolysis'&&state.running;build();}
+function frame(now){
+  rafId=null;if(!state.running)return;
+  let remaining=(now-lastNow)/1000;lastNow=now;
+  while(remaining>0&&state.running){
+    const step=Math.min(remaining,duration()-state.elapsed);state.elapsed+=step;remaining-=step;
+    if(state.elapsed>=duration()){
+      if(state.sequence&&state.sequenceIndex<3){state.sequenceIndex++;setScene(order[state.sequenceIndex]);}
+      else{state.elapsed=duration();state.running=false;state.sequence=false;}
+    }
+  }
+  render();if(state.running)rafId=requestAnimationFrame(frame);
+}
+function start(){
+  if(state.running)return;
+  if(state.elapsed>=duration()){state.elapsed=0;state.summary=false;}
+  state.running=true;if(state.elapsed===0&&state.mode==='hydrolysis')state.enzymeVisible=true;
+  lastNow=performance.now();cancelFrame();render();rafId=requestAnimationFrame(frame);
+}
+function pause(){state.running=false;cancelFrame();render();}
+function select(item){pause();state.sequence=false;state.enzymeVisible=false;setScene(item);render();}
+$('play').addEventListener('click',()=>state.running?pause():start());
+$('replay').addEventListener('click',()=>{pause();state.sequence=false;state.elapsed=0;state.summary=false;state.enzymeVisible=false;render();start();});
+$('modeA').addEventListener('click',()=>{if(state.mode!=='hydrolysis')select(state.reaction);});
+$('modeB').addEventListener('click',()=>{if(state.mode!=='banana')select('banana');});
+document.querySelectorAll('button[data-reaction]').forEach(el=>el.addEventListener('click',()=>select(el.dataset.reaction)));
+$('sequence').addEventListener('click',()=>{
+  if(state.sequence){pause();state.sequence=false;render();return;}
+  pause();state.sequence=true;state.sequenceIndex=0;setScene('starch');start();
+});
+$('enzymeToggle').addEventListener('change',event=>{state.enzymeVisible=event.target.checked;render();});
+$('motionToggle').addEventListener('change',event=>{state.reduced=event.target.checked;render();});
+for(const lang of ['zh','en'])$(lang).addEventListener('click',()=>{state.lang=lang;applyText();buildLegend();render();});
+$('showSummary').addEventListener('click',()=>{state.summary=!state.summary;render();});
+$('fullscreen').addEventListener('click',async()=>{
+  try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}
+  catch{ $('statusMessage').hidden=false;text('statusMessage',t('fullscreenUnavailable')); }
+});
+document.addEventListener('fullscreenchange',()=>applyText());
+const media=matchMedia('(max-width:639px)');media.addEventListener('change',event=>{mobile=event.matches;build();});
+window.addEventListener('pagehide',cancelFrame);
+build();
+})();
+</script>
+</body>
 </html>
