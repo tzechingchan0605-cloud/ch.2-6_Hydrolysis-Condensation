@@ -1,23 +1,9 @@
 {
-  "name": "molecule-lab",
-  "version": "1.0.0",
+  "name": "banana-ripening-classroom",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/engine.test.js",
-    "test:e2e": "playwright test",
-    "test:deployment": "playwright test --config playwright.deployment.config.js"
-  },
-  "dependencies": {
-    "lucide-react": "^0.468.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.58.0",
-    "vite": "^6.4.0"
-  }
+  "description": "Offline single-file biology teaching model; dependencies are for browser testing only.",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "1.58.2" }
 }

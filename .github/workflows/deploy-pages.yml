@@ -1,16 +1,13 @@
-name: Build and deploy simulator
-
+name: Test and publish offline simulator
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,17 +16,18 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:deployment
+      - run: npm test
+      - name: Prepare the self-contained page
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
-
+          path: _site
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -42,6 +40,5 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/configure-pages@v5
-      - name: Deploy production bundle
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
