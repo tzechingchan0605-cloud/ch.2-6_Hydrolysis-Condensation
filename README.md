@@ -14,12 +14,38 @@ Download `index.html` and open it directly in a modern browser. The page include
 
 1. 選水解反應，先讓學生口頭預測所需的酶，再播放或揭示名稱。每組約 14 秒，包含同一個酶再次催化的示範。
 2. 指出水移近被突出顯示的鍵；斷鍵後產物離開，水不再作為完整水分子出現。
-3. 切換香蕉成熟，觀看約 24 秒的整體模型，回看學生的實驗繪圖；按「顯示總結」才揭示解釋。
-4. 「課堂連續示範」依序播放三組水解及香蕉成熟，總長約 66 秒。可暫停、繼續及重播；手動選反應會停止連續示範。
+3. 切換香蕉成熟，觀看約 32 秒的逐層放大模型，回看學生的實驗繪圖；按「顯示總結」才揭示解釋。
+4. 「課堂連續示範」依序播放三組水解及香蕉成熟，總長約 74 秒。可暫停、繼續及重播；手動選反應會停止連續示範。
 
-Choose a reaction, invite an oral prediction, and reveal the enzyme or press Play. Each 14-second example includes reuse of the same enzyme. The 24-second ripening model ends with two discussion questions; the summary appears only on request. Continuous demonstration plays all four scenes in 66 seconds. Pause, replay, full screen and reduced motion are available.
+Choose a reaction, invite an oral prediction, and reveal the enzyme or press Play. Each 14-second example includes reuse of the same enzyme. The 32-second banana zoom ends with two discussion questions; the summary appears only on request. Continuous demonstration plays all four scenes in 74 seconds. Pause, replay, full screen and reduced motion are available.
 
 The collapsible model notes inside the page explain the scientific simplifications, observation limits and primary references. No actual micrographs were supplied or fabricated. Sugar symbols are displayed separately from the schematic cell/granule view.
+
+## Zoom story and scientific qualifications
+
+The page starts with an unripe banana. Play or use the four level buttons to zoom
+into a schematic pulp cell, a starch granule, and an accessible surface-chain
+teaching model. The time bar supports seeking and pausing; its seconds are playback
+time, not actual ripening days. Reduced motion uses discrete views.
+
+The molecular example tracks one eight-unit segment: two successive end cleavages
+release two maltose pairs and leave four starch units. Each pair then undergoes a
+separate maltase hydrolysis example, producing four glucose molecules in total.
+The four broken bonds use four water molecules. β-amylase is used for endwise
+maltose release; this is not a complete banana pathway or a claim that maltase is
+the dominant, sole, or co-located route for banana maltose metabolism.
+
+The later phase illustrates greater available catalytic capacity with extra enzyme
+symbols and overlapping reactions. Each bound hydrolysis step keeps its 1.6-second
+duration; icons are not measured enzyme counts and do not assert that all enzymes
+increase indefinitely. Real rate also depends on accessible substrate and conditions.
+
+Newly drawn shapes and Chinese terminology follow supplied Chapter 5, pp. 5-7–5-8,
+Figs. 5.5–5.6, and Chapter 6, p. 6-6, Figs. 6.5–6.6. The PDFs are not redistributed.
+
+Additional sources: [IUBMB β-amylase](https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/2.html),
+[Xiao et al. (2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC5785343/) and
+[Bassinello et al. (2002)](https://pubmed.ncbi.nlm.nih.gov/12358438/).
 
 ## Tests and hosting
 
