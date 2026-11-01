@@ -21,6 +21,33 @@ npm run build    # production bundle in dist/
 
 Browser tests use the system Chromium at `/usr/bin/chromium` when available. On another machine, install Playwright's Chromium with `npx playwright install chromium` first. The configuration starts Vite if a server is not already running. Serve the production bundle with `npm run preview -- --port 4173`, or deploy `dist/` to any static host.
 
+## GitHub Pages deployment
+
+GitHub Pages must serve the production bundle in `dist/`. Publishing the source
+directory directly leaves a blank page because browsers cannot run the JSX source
+or resolve its package imports.
+
+1. In the repository's **Settings → Pages → Build and deployment**, set **Source**
+   to **GitHub Actions**. This is a one-time setting.
+2. Merge the deployment workflow into `main`. Each push to `main` then installs
+   dependencies, tests the engine, builds the app, checks the production bundle in
+   Chromium under the project path, and deploys `dist/` using the Pages artifact.
+   Pull requests run the checks without deploying.
+3. Wait for **Build and deploy simulator** to succeed in Actions, then open
+   <https://tzechingchan0605-cloud.github.io/ch.2-6_Hydrolysis-Condensation/>.
+   If the old blank page is cached, press **Ctrl+Shift+R**.
+
+`vite.config.js` uses relative asset URLs so the build works under the repository
+path as well as at a domain root. To verify the same project-path deployment locally:
+
+```bash
+npm run build
+npm run test:deployment
+```
+
+If the deployment fails while checking Pages configuration, confirm that Source
+is set to GitHub Actions, then rerun the workflow from the Actions tab.
+
 ## How to use
 
 1. Add a component with its tray button or drag it onto the workbench. Touching or dragging components does **not** form a chemical bond.
