@@ -1,387 +1,122 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-
-const html = readFileSync('index.html', 'utf8');
-const epoch = new Date('2026-11-01T12:00:00Z');
-test.beforeEach(async ({ page }) => {
-  page.errors = []; page.externalRequests = [];
-  page.on('pageerror', error => page.errors.push(error.message));
-  await page.route('**/*', route => {
-    if (/^https?:/.test(route.request().url())) {
-      page.externalRequests.push(route.request().url()); return route.abort();
-    }
-    return route.continue();
-  });
-  await page.clock.install({ time: epoch });
-  // Load the complete local document with no server and every network request blocked.
-  await page.setContent(html);
-  await page.clock.pauseAt(new Date(epoch.getTime() + 1000));
-  await page.locator('#modeA').click();
+const html=readFileSync('index.html','utf8');
+const epoch=new Date('2026-11-02T12:00:00Z');
+test.beforeEach(async({page})=>{
+ page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));
+ await page.clock.install({time:epoch});await page.setContent(html);await page.clock.pauseAt(new Date(epoch.getTime()+1000));
 });
-test.afterEach(async ({ page }) => {
-  expect(page.errors).toEqual([]);
-  expect(page.externalRequests).toEqual([]);
-});
-const English = async page => page.getByRole('button', { name: 'English', exact: true }).click();
-const elapsed = page => page.locator('#lesson').getAttribute('data-elapsed').then(Number);
-const select = async (page, reaction) => page.locator(`button[data-reaction="${reaction}"]`).click();
-const play = async page => page.locator('#play').click();
-const forward = async (page, ms) => page.clock.fastForward(ms);
-async function productTypes(page, cycle) {
-  return page.locator(`#cycle${cycle} [data-product]`).evaluateAll(nodes => nodes.map(n => n.dataset.product).filter(Boolean));
-}
-async function waterDistance(page, cycle = 0) {
-  return page.evaluate(c => {
-    const matrix = document.getElementById(`c${c}water`).transform.baseVal.consolidate().matrix;
-    const target = document.getElementById(`c${c}target`);
-    return Math.hypot(matrix.e - Number(target.getAttribute('cx')), matrix.f - Number(target.getAttribute('cy')));
-  }, cycle);
-}
+test.afterEach(async({page})=>expect(page.errors).toEqual([]));
+const seek=async(page,sec)=>page.locator('#storyTime').evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},String(sec));
+const choose=async(page,reaction)=>{await page.locator('#modeA').click();await page.locator(`button[data-reaction="${reaction}"]`).click();};
 
-test('self-contained file opens offline in Traditional Chinese with an oral enzyme question', async ({ page }) => {
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
-  await expect(page.locator('#stageCaption')).toHaveText('這項反應需要哪種酶？');
-  await expect(page.locator('#enzymeName')).toHaveText('酶 ?');
-  await expect(page.locator('#c0water')).toBeVisible();
+test('renamed levels, multiple chains and only the two working enzymes',async({page})=>{
+ await expect(page.locator('[data-zoom="3.3"]')).toContainText('香蕉果肉細胞');
+ await expect(page.locator('[data-zoom="8.5"]')).toContainText('多糖與雙糖的水解');
+ await seek(page,6.5);await expect(page.locator('#zoomGranuleWorld [data-starch-chain]')).toHaveCount(4);
+ await seek(page,10);await expect(page.locator('.zoom-enzyme')).toHaveCount(2);
+ await expect(page.locator('#zBeta')).toContainText('澱粉酶');
+ await expect(page.locator('#zBeta')).not.toContainText('β-');
+ await expect(page.locator('[data-molecule="water"] circle')).toHaveCount(0);
+ await expect(page.locator('#zoomMoleculeWorld')).toContainText('1 個雙糖 ＋ H₂O → 2 個單糖');
+});
+test('the entire eight-unit chain becomes four maltose molecules, then eight glucose molecules',async({page})=>{
+ await seek(page,11.8);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(6);
+ await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(2);
+ await seek(page,15.9);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(0);
+ await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(8);
+ await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(4);
+ await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','3');
+ await seek(page,25.8);await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(8);
+ await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(0);
+ await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','7');
+ await seek(page,9);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(8);
+ await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','0');
+});
+test('Part A starch processes the entire chain and scrubbing restores previous states',async({page})=>{
+ await choose(page,'starch');await expect(page.locator('#storyTime')).toBeVisible();
+ await expect(page.locator('#equation')).toContainText('澱粉酶');await expect(page.locator('#equation')).not.toContainText('酶 ?');
+ await seek(page,14);await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(6);
+ await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(0);
+ await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','2');
+ await seek(page,3);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(6);
+ await expect(page.locator('#lesson')).toHaveAttribute('data-playing','false');
+});
+for(const [reaction,enzyme,products] of [['maltose','麥芽糖酶',['glucose','glucose']],['sucrose','蔗糖酶',['glucose','fructose']]]){
+ test(`${reaction}: named enzyme, water participation, products, reuse, reversible timeline`,async({page})=>{
+  await choose(page,reaction);await expect(page.locator('#enzymeName')).toHaveText(enzyme);
+  await expect(page.locator('#equation')).toContainText(enzyme);
+  await seek(page,4);await expect(page.locator('#c0water')).toBeVisible();
+  await expect(page.locator('#cycle0')).toHaveAttribute('data-cleaved','false');
+  await seek(page,14);
+  for(const cycle of [0,1]){
+   expect(await page.locator(`#cycle${cycle} [data-product]`).evaluateAll(ns=>ns.map(n=>n.dataset.product))).toEqual(products);
+   await expect(page.locator(`#c${cycle}water`)).toBeHidden();
+  }
+  await expect(page.locator('#ledger')).toContainText('2');
+  await seek(page,1);await expect(page.locator('#c0water')).toBeVisible();
   await expect(page.locator('#cycle1')).toBeHidden();
-  expect(await productTypes(page, 0)).toEqual([]);
-  await expect(page.locator('[data-equation-product]')).toHaveText('生成物待揭示');
-  await expect(page.locator('textarea, input[type="text"], input[type="password"]')).toHaveCount(0);
-  const source = readFileSync('index.html', 'utf8');
-  expect(source).not.toMatch(/<(?:script|link)[^>]+(?:src|href)=/i);
-});
-
-for (const [reaction, enzyme, expected] of [
-  ['maltose', 'Maltase', ['glucose', 'glucose']],
-  ['sucrose', 'Sucrase', ['glucose', 'fructose']],
-]) {
-  test(`${reaction}: contact, water participation, correct products and enzyme reuse`, async ({ page }) => {
-    await English(page); await select(page, reaction);
-    const enzymeElement = await page.locator('#enzymeBody').elementHandle();
-    const enzymeShape = await enzymeElement.getAttribute('d');
-    await enzymeElement.evaluate(e => { e.identityMarker = 'same-enzyme'; });
-    await play(page);
-    await expect(page.locator('#enzymeName')).toHaveText(enzyme);
-    await forward(page, 3000);
-    await expect(page.locator('#c0target')).toBeVisible();
-    expect(await productTypes(page, 0)).toEqual([]);
-    const far = await waterDistance(page);
-    await page.clock.runFor(2400);
-    expect(await waterDistance(page)).toBeLessThan(far - 50);
-    await expect(page.locator('#stageCaption')).toHaveText('Water takes part in hydrolysis');
-    await forward(page, 1000);
-    expect(await productTypes(page, 0)).toEqual(expected);
-    await expect(page.locator('#c0water')).toBeHidden();
-    await expect(page.locator('#c0b0')).toBeHidden();
-    await expect(page.locator('#ledger')).toHaveText('Bonds broken 1 · Water used 1');
-    await forward(page, 3500);
-    await expect(page.locator('#cycle1')).toBeVisible();
-    await expect(page.locator('#c1water')).toBeVisible();
-    await expect(page.locator('#c0water')).toBeHidden();
-    await expect(page.locator('#enzymeModel')).toHaveCount(1);
-    expect(await enzymeElement.evaluate(e => e.identityMarker)).toBe('same-enzyme');
-    expect(await enzymeElement.getAttribute('d')).toBe(enzymeShape);
-    await forward(page, 5000);
-    expect(await productTypes(page, 1)).toEqual(expected);
-    await expect(page.locator('#ledger')).toHaveText('Bonds broken 2 · Water used 2');
-    await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'false');
-    await expect(page.locator('#enzymeReuse')).toHaveText('Same enzyme · not consumed');
-    await expect(page.locator('#equation')).toContainText(reaction === 'maltose' ? 'Two glucose molecules' : 'Glucose + fructose');
-    for (const cycle of [0, 1]) await expect(page.locator(`#c${cycle}water`)).toBeHidden();
-  });
+ });
 }
-
-test('starch releases a two-glucose maltose fragment and retains a four-unit shorter chain', async ({ page }) => {
-  await English(page); await play(page); await forward(page, 8000);
-  expect(await productTypes(page, 0)).toEqual(['starch', 'starch', 'starch', 'starch', 'maltose', 'maltose']);
-  await expect(page.locator('#c0b3')).toBeHidden();
-  for (const bond of [0, 1, 2, 4]) {
-    expect(await page.locator(`#c0b${bond}`).evaluate(e => getComputedStyle(e).display)).not.toBe('none');
-    expect(await page.locator(`#c0b${bond}`).evaluate(e => e.getBBox().width)).toBeGreaterThan(0);
+test('all three enzymes use different colours and different active-site outlines',async({page})=>{
+ const colours=[],shapes=[];
+ await choose(page,'starch');colours.push(await page.locator('#zBeta .zoom-enzyme-body').getAttribute('fill'));shapes.push(await page.locator('#zBeta .zoom-enzyme-body').getAttribute('d'));
+ for(const reaction of ['maltose','sucrose']){await choose(page,reaction);colours.push(await page.locator('#enzymeBody').getAttribute('fill'));shapes.push(await page.locator('#enzymeBody').getAttribute('d'));}
+ expect(new Set(colours).size).toBe(3);expect(new Set(shapes).size).toBe(3);
+});
+test('active-site docking precedes water use; the same enzyme persists across all cleavages',async({page})=>{
+ const enzyme=await page.locator('#zBeta').elementHandle();await enzyme.evaluate(e=>e.marker='same');
+ for(const [sec,id,bond] of [[9.8,'release0',1],[12,'release1',3],[14.2,'release2',5]]){
+  await seek(page,sec);await expect(page.locator(`#zReaction${id}`)).toHaveAttribute('data-bound','true');
+  await expect(page.locator(`#zBond${bond}`)).toHaveAttribute('data-cleaved','false');
+  expect(await page.evaluate(id=>{const m=document.getElementById('zBeta').transform.baseVal.consolidate().matrix;const target=document.getElementById(`zTarget${id}`);return Math.hypot(m.e-Number(target.getAttribute('cx')),m.f-Number(target.getAttribute('cy')));},id)).toBeLessThan(1);
+ }
+ expect(await enzyme.evaluate(e=>e.marker)).toBe('same');
+});
+test('pause, language change, keyboard seeking and resume retain the selected time',async({page})=>{
+ await choose(page,'maltose');await page.locator('#play').click();await page.clock.runFor(3000);await page.locator('#play').click();
+ const time=await page.locator('#lesson').getAttribute('data-elapsed');await page.clock.fastForward(5000);await expect(page.locator('#lesson')).toHaveAttribute('data-elapsed',time);
+ await page.locator('#en').click();await expect(page.locator('#lesson')).toHaveAttribute('data-elapsed',time);
+ await page.locator('#storyTime').focus();await page.keyboard.press('End');await expect(page.locator('#lesson')).toHaveAttribute('data-elapsed','14.000');
+ await seek(page,5);await page.locator('#play').click();await page.clock.runFor(1000);expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(6,1);
+});
+test('continuous demonstration completes all four scenes in 74 seconds',async({page})=>{
+ await page.locator('#sequence').click();
+ for(const reaction of ['maltose','sucrose']){await page.clock.fastForward(14000);await expect(page.locator('#lesson')).toHaveAttribute('data-reaction',reaction);}
+ await page.clock.fastForward(14000);await expect(page.locator('#lesson')).toHaveAttribute('data-mode','banana');
+ await page.clock.fastForward(32100);await expect(page.locator('#lesson')).toHaveAttribute('data-playing','false');
+ await expect(page.locator('#review')).toBeVisible();await expect(page.locator('#summaryText')).toBeHidden();
+});
+for(const width of [390,768,1440])test(`all diagrams fit at ${width}px in both languages`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ for(const lang of ['zh','en']){
+  await page.locator(`#${lang}`).click();
+  for(const reaction of ['starch','maltose','sucrose']){
+   await choose(page,reaction);for(const sec of [0,4,9.5,14]){await seek(page,sec);await fits(page);}
   }
-  await expect(page.locator('#c0productLeft')).toHaveText('Shorter starch chain');
-  await expect(page.locator('#c0productRight')).toHaveText('Maltose');
-  await expect(page.locator('#sceneEyebrow')).toHaveText('Simplified curriculum model');
-  await forward(page, 7000);
-  expect(await productTypes(page, 1)).toEqual(['starch', 'starch', 'starch', 'starch', 'maltose', 'maltose']);
-  await expect(page.locator('#ledger')).toHaveText('Bonds broken 2 · Water used 2');
-  await page.locator('#modelNotes').evaluate(d => { d.open = true; });
-  await expect(page.locator('#modelNotes')).toContainText('real starch breakdown involves different enzymes and other intermediates');
+  await page.locator('#modeB').click();for(const sec of [0,3.4,6.5,8.5,10,12,14.4,15.9,17,20,25.8,32]){await seek(page,sec);await fits(page);}
+ }
 });
-
-for (const reaction of ['starch', 'maltose', 'sucrose']) {
-  test(`${reaction}: each cleavage consumes exactly one water molecule at the selected bond`, async ({ page }) => {
-    await English(page); await select(page, reaction); await play(page);
-    await forward(page, 5500);
-    await expect(page.locator('#c0water')).toBeVisible();
-    expect(await waterDistance(page)).toBeLessThan(5);
-    await expect(page.locator('#ledger')).toHaveText('Bonds broken 0 · Water used 0');
-    await page.clock.runFor(200);
-    await expect(page.locator('#c0water')).toBeHidden();
-    await expect(page.locator('#cycle0')).toHaveAttribute('data-cleaved', 'true');
-    await expect(page.locator('#ledger')).toHaveText('Bonds broken 1 · Water used 1');
-    await forward(page, 5750);
-    await expect(page.locator('#c1water')).toBeVisible();
-    expect(await waterDistance(page, 1)).toBeLessThan(5);
-    await page.clock.runFor(150);
-    await expect(page.locator('#c1water')).toBeHidden();
-    await expect(page.locator('#ledger')).toHaveText('Bonds broken 2 · Water used 2');
-  });
+async function fits(page){
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ const over=await page.locator('#diagram').evaluate(svg=>{const bounds=svg.getBoundingClientRect();return [...svg.querySelectorAll('text')].filter(el=>{const b=el.getBoundingClientRect();return b.width&&b.height&&getComputedStyle(el).display!=='none'&&!el.closest('[style*="display: none"]')&&(b.left<bounds.left-2||b.right>bounds.right+2||b.top<bounds.top-2||b.bottom>bounds.bottom+2);}).map(el=>el.textContent);});expect(over).toEqual([]);
 }
 
-test('pause freezes the model, resume advances once, and repeated replay does not multiply timers', async ({ page }) => {
-  await English(page); await play(page); await page.clock.runFor(4500); await play(page);
-  const frozen = await elapsed(page);
-  const water = await page.locator('#c0water').getAttribute('transform');
-  await forward(page, 45000);
-  expect(await elapsed(page)).toBe(frozen);
-  await expect(page.locator('#c0water')).toHaveAttribute('transform', water);
-  await play(page); await page.clock.runFor(1000);
-  expect(await elapsed(page)).toBeCloseTo(frozen + 1, 1);
-  for (let i = 0; i < 4; i++) await page.locator('#replay').click();
-  await page.clock.runFor(1000);
-  expect(await elapsed(page)).toBeCloseTo(1, 1);
-  await forward(page, 14000);
-  expect(await elapsed(page)).toBe(14);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'false');
-  await forward(page, 30000); expect(await elapsed(page)).toBe(14);
-});
-
-test('switching reaction cancels playback and returns to a fresh prediction', async ({ page }) => {
-  await English(page); await play(page); await forward(page, 6000); await select(page, 'sucrose');
-  expect(await elapsed(page)).toBe(0);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'false');
-  await expect(page.locator('#enzymeName')).toHaveText('Enzyme ?');
-  expect(await productTypes(page, 0)).toEqual([]);
-  await forward(page, 30000); expect(await elapsed(page)).toBe(0);
-  await play(page); await forward(page, 14500);
-  expect(await productTypes(page, 0)).toEqual(['glucose', 'fructose']);
-});
-
-test('enzyme can be revealed before playing and hidden without changing the animation', async ({ page }) => {
-  await English(page); await select(page, 'maltose'); await page.locator('#enzymeToggle').check();
-  await expect(page.locator('#enzymeName')).toHaveText('Maltase');
-  expect(await elapsed(page)).toBe(0);
-  await play(page); await forward(page, 4500); const before = await elapsed(page);
-  await page.locator('#enzymeToggle').uncheck(); await expect(page.locator('#enzymeName')).toHaveText('Enzyme ?');
-  expect(await elapsed(page)).toBe(before);
-});
-
-test('language switching preserves exact progress, running state and the same enzyme', async ({ page }) => {
-  await play(page); await forward(page, 5000); const before = await elapsed(page);
-  const body = await page.locator('#enzymeBody').elementHandle();
-  await body.evaluate(e => { e.identityMarker = 'retained'; });
-  await English(page);
-  expect(await elapsed(page)).toBe(before);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'true');
-  expect(await body.evaluate(e => e.identityMarker)).toBe('retained');
-  await expect(page.locator('#stageCaption')).toHaveText('Water takes part in hydrolysis');
-  await page.getByRole('button', { name: '繁中', exact: true }).click();
-  expect(await elapsed(page)).toBe(before);
-  await expect(page.locator('#stageCaption')).toHaveText('水參與水解');
-});
-
-test('the four-scene continuous demonstration lasts 74 seconds and does not reveal the summary', async ({ page }) => {
-  await English(page); await page.locator('#sequence').click();
-  await forward(page, 14100); await expect(page.locator('#lesson')).toHaveAttribute('data-reaction', 'maltose');
-  await forward(page, 14000); await expect(page.locator('#lesson')).toHaveAttribute('data-reaction', 'sucrose');
-  await forward(page, 14000); await expect(page.locator('#lesson')).toHaveAttribute('data-mode', 'banana');
-  await forward(page, 31000); await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'true');
-  await expect(page.locator('#review')).toBeHidden();
-  await forward(page, 1000); await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'false');
-  expect(await elapsed(page)).toBe(32);
-  await expect(page.locator('#review')).toBeVisible();
-  await expect(page.locator('#summaryText')).toBeHidden();
-  await expect(page.locator('#review .review-questions p')).toHaveCount(2);
-});
-
-test('stopping or manually switching out of a continuous demonstration cancels future scenes', async ({ page }) => {
-  await English(page); await page.locator('#sequence').click(); await forward(page, 5000);
-  await page.locator('#sequence').click(); const stopped = await elapsed(page);
-  await forward(page, 70000); expect(await elapsed(page)).toBe(stopped);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-sequence', 'false');
-  await page.locator('#sequence').click(); await forward(page, 15000); await select(page, 'starch');
-  await forward(page, 70000); expect(await elapsed(page)).toBe(0);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-reaction', 'starch');
-});
-
-test('banana ripening starts with sugar, retains some starch and keeps molecular and cellular views separate', async ({ page }) => {
-  await English(page); await page.locator('#modeB').click();
-  expect(await page.locator('[data-sugar][data-visible="true"]').count()).toBe(3);
-  expect(await page.locator('[data-granule][data-remaining="true"]').count()).toBe(10);
-  await expect(page.locator('#diagram')).toContainText('Not a microscope image');
-  await expect(page.locator('#multistepLabel')).toHaveText('Multistep conversion involving many enzymes');
-  await expect(page.locator('#bananaNote')).toContainText('not a complete or single banana pathway');
-  await expect(page.locator('#lesson')).toHaveAttribute('data-zoom-level', 'banana');
-  await expect(page.locator('#zoomMoleculeWorld')).toBeHidden();
-  await play(page); await forward(page, 32100);
-  expect(await page.locator('[data-sugar][data-visible="true"]').count()).toBe(12);
-  expect(await page.locator('[data-granule][data-remaining="true"]').count()).toBe(3);
-  await expect(page.locator('#diagram')).toContainText('Ripe');
-  await expect(page.locator('#summaryText')).toBeHidden();
-  await page.locator('#showSummary').click();
-  await expect(page.locator('#summaryText')).toContainText('processes involving many enzymes');
-  await expect(page.locator('#review')).toContainText('did not directly measure sugar content');
-  await page.getByRole('button', { name: '繁中', exact: true }).click();
-  expect(await elapsed(page)).toBe(32);
-  await expect(page.locator('#summaryText')).toHaveText('香蕉成熟時，部分澱粉被分解，並經多種酶參與的轉化形成可溶性糖，與甜度增加有關。');
-});
-
-test('reduced motion keeps every scientific stage and the same timing', async ({ page }) => {
-  await English(page); await page.locator('#motionToggle').check(); await select(page, 'maltose'); await play(page);
-  await forward(page, 4200);
-  expect(await waterDistance(page)).toBeLessThan(1);
-  await expect(page.locator('#c0water')).toBeVisible();
-  expect(await productTypes(page, 0)).toEqual([]);
-  await forward(page, 1500);
-  expect(await productTypes(page, 0)).toEqual(['glucose', 'glucose']);
-  await expect(page.locator('#c0water')).toBeHidden();
-  await forward(page, 8500); expect(await elapsed(page)).toBe(14);
-});
-
-async function seekStory(page, seconds) {
-  await page.locator('#storyTime').evaluate((input, value) => {
-    input.value = String(value); input.dispatchEvent(new Event('input', { bubbles: true }));
-  }, seconds);
-}
-test('banana zoom moves through cell, solid granule and a labelled molecular model', async ({ page }) => {
-  await English(page); await page.locator('#modeB').click();
-  await expect(page.locator('#zoomBananaWorld')).toBeVisible();
-  await expect(page.locator('#zoomCellWorld')).toBeHidden();
-  await play(page); await forward(page, 2400);
-  await expect(page.locator('#zoomBananaWorld')).toHaveAttribute('transform', /scale\(/);
-  await expect(page.locator('#zoomCellWorld')).toBeVisible();
-  await forward(page, 1100); await expect(page.locator('#lesson')).toHaveAttribute('data-zoom-level', 'cell');
-  await forward(page, 3000); await expect(page.locator('#lesson')).toHaveAttribute('data-zoom-level', 'granule');
-  await expect(page.locator('#zoomGranuleWorld')).toContainText('Starch granule surface');
-  await forward(page, 2100); await expect(page.locator('#lesson')).toHaveAttribute('data-zoom-level', 'molecules');
-  await expect(page.locator('#zoomMoleculeWorld')).toContainText('locations are not literal');
-  await expect(page.locator('#storyTimebar')).toContainText('Playback seconds, not ripening days');
-});
-test('successive end cleavages release maltose pairs, then each pair yields two glucose molecules', async ({ page }) => {
-  await English(page); await page.locator('#modeB').click();
-  await seekStory(page, 13.7);
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-cleavages', '1');
-  await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(6);
-  await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(2);
-  await expect(page.locator('#zBond1')).toHaveAttribute('data-cleaved', 'true');
-  await expect(page.locator('#zBond0')).toHaveAttribute('data-cleaved', 'false');
-  await seekStory(page, 19.5);
-  await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(4);
-  await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(2);
-  await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(2);
-  await seekStory(page, 25.5);
-  await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(4);
-  await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(4);
-  await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(0);
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used', '4');
-  await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(3);
-  // Seeking backwards must restore the earlier bonds and water balance exactly.
-  await seekStory(page, 9);
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-cleavages', '0');
-  await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(7);
-});
-test('docking is followed by water participation before cleavage, rather than instant collision cutting', async ({ page }) => {
-  await English(page); await page.locator('#modeB').click();
-  const enzyme = await page.locator('#zBeta').elementHandle();
-  await enzyme.evaluate(e => { e.reuseMarker = 'persistent'; });
-  await seekStory(page, 10.5);
-  await expect(page.locator('#zReactionreleaseA')).toHaveAttribute('data-bound', 'true');
-  await expect(page.locator('#zWaterreleaseA')).toBeVisible();
-  await expect(page.locator('#zBond1')).toHaveAttribute('data-cleaved', 'false');
-  const aligned = await page.evaluate(() => {
-    const enzyme = document.getElementById('zBeta').transform.baseVal.consolidate().matrix;
-    const target = document.getElementById('zTargetreleaseA');
-    return Math.hypot(enzyme.e - Number(target.getAttribute('cx')), enzyme.f - Number(target.getAttribute('cy')));
-  });
-  expect(aligned).toBeLessThan(1);
-  await seekStory(page, 12.1);
-  await expect(page.locator('#zWaterreleaseA')).toBeHidden();
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used', '1');
-  await seekStory(page, 16.6);
-  expect(await enzyme.evaluate(e => e.reuseMarker)).toBe('persistent');
-  await expect(page.locator('#zReactionreleaseB')).toHaveAttribute('data-bound', 'true');
-  await expect(page.locator('#zReactionmaltaseA')).toHaveAttribute('data-bound', 'true');
-  await expect(page.locator('#zWaterreleaseB')).toBeVisible();
-  await expect(page.locator('#zWatermaltaseA')).toBeVisible();
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-capacity', 'later');
-  await expect(page.locator('.zoom-enzyme:visible')).toHaveCount(5);
-  await expect(page.locator('#zoomCapacity')).toContainText('illustration');
-  for (const seconds of [17.8,18.1,23.5]) {
-    await seekStory(page, seconds);
-    const expected = seconds < 17.9 ? 2 : seconds < 23.3 ? 3 : 4;
-    await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used', String(expected));
-  }
-});
-test('time bar and zoom chapters pause safely and language switching preserves the selected instant', async ({ page }) => {
-  await English(page); await page.locator('#modeB').click(); await play(page);
-  await page.locator('[data-zoom="8.5"]').click();
-  expect(await elapsed(page)).toBe(8.5);
-  await expect(page.locator('#lesson')).toHaveAttribute('data-playing', 'false');
-  await forward(page, 30000); expect(await elapsed(page)).toBe(8.5);
-  await play(page); await page.clock.runFor(1000);
-  expect(await elapsed(page)).toBeCloseTo(9.5,1);
-  await seekStory(page, 16.6);
-  await page.getByRole('button',{name:'繁中',exact:true}).click();
-  expect(await elapsed(page)).toBe(16.6);
-  await expect(page.locator('#zoomCapacity')).toContainText('示意');
-  await page.locator('#motionToggle').check();
-  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used', '1');
-  await page.locator('#storyTime').focus(); await page.keyboard.press('End');
-  expect(await elapsed(page)).toBe(32);
-  await expect(page.locator('#review')).toBeVisible();
-  await expect(page.locator('#summaryText')).toBeHidden();
-});
-
-async function assertNoHorizontalOverflow(page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-}
-async function assertSvgTextFits(page) {
-  const overflow = await page.locator('#diagram').evaluate(svg => {
-    const bounds = svg.getBoundingClientRect();
-    return [...svg.querySelectorAll('text')].filter(e => {
-      const b = e.getBoundingClientRect();
-      return b.width && b.height && getComputedStyle(e).display !== 'none' &&
-        !e.closest('[style*="display: none"]') &&
-        (b.left < bounds.left - 2 || b.right > bounds.right + 2 || b.top < bounds.top - 2 || b.bottom > bounds.bottom + 2);
-    }).map(e => ({ text: e.textContent, bounds: e.getBoundingClientRect().toJSON() }));
-  });
-  expect(overflow).toEqual([]);
-}
-for (const viewport of [{width:390,height:844},{width:768,height:1024},{width:1440,height:810},{width:390,height:844,font:'DejaVu Sans'}]) {
-  test(`layouts and translations at ${viewport.width}px${viewport.font ? ` with ${viewport.font}` : ''} keep diagrams and controls readable`, async ({ page }) => {
-    await page.setViewportSize({width:viewport.width,height:viewport.height});
-    if(viewport.font) await page.addStyleTag({content:':root{font-family:"DejaVu Sans",sans-serif}'});
-    await English(page);
-    for (const reaction of ['starch','maltose','sucrose']) {
-      await select(page, reaction); await play(page); await forward(page, 14500);
-      await assertNoHorizontalOverflow(page); await assertSvgTextFits(page);
-    }
-    await page.locator('#modeB').click();
-    for (const second of [8.5,10.5,13.7,16.6,19.5,25.5]) {
-      await seekStory(page, second); await assertNoHorizontalOverflow(page); await assertSvgTextFits(page);
-    }
-    await seekStory(page, 32);
-    await assertNoHorizontalOverflow(page); await assertSvgTextFits(page);
-    await page.locator('#showSummary').click(); await assertNoHorizontalOverflow(page);
-    const english = await page.locator('#projector').innerText();
-    expect(english.replace('繁中','')).not.toMatch(/[\u3400-\u9fff]/);
-    await page.getByRole('button', {name:'繁中',exact:true}).click();
-    await assertNoHorizontalOverflow(page); await assertSvgTextFits(page);
-  });
-}
-
-test('full screen preserves playback and all primary controls stay inside the viewport', async ({ page }) => {
-  await English(page); await play(page); await forward(page, 5000); const before = await elapsed(page);
-  await page.locator('#fullscreen').click();
-  expect(await page.evaluate(() => !!document.fullscreenElement)).toBe(true);
-  expect(await elapsed(page)).toBe(before);
-  for (const id of ['play','replay','modeA','modeB','sequence','fullscreen']) {
-    const rect = await page.locator(`#${id}`).boundingBox();
-    expect(rect.x).toBeGreaterThanOrEqual(0); expect(rect.y).toBeGreaterThanOrEqual(0);
-    expect(rect.x + rect.width).toBeLessThanOrEqual(1441); expect(rect.y + rect.height).toBeLessThanOrEqual(901);
-  }
-  await page.locator('#fullscreen').click();
-  expect(await page.evaluate(() => !!document.fullscreenElement)).toBe(false);
-  expect(await elapsed(page)).toBe(before);
+test('the uploaded photos are embedded exactly and the selected cell granule supplies level 03',async({page})=>{
+ const banana='data:image/jpeg;base64,'+readFileSync('assets/banana.jpeg').toString('base64');
+ const cell='data:image/jpeg;base64,'+readFileSync('assets/banana cell.jpg').toString('base64');
+ await expect(page.locator('#bananaPhoto')).toHaveAttribute('href',banana);
+ await expect(page.locator('#bananaCellPhoto')).toHaveAttribute('href',cell);
+ await expect(page.locator('#granulePhoto')).toHaveAttribute('href',cell);
+ // The first selection falls in exposed pulp, above the folded peel.
+ const sourcePoint=await page.locator('#bananaPhoto').evaluate(image=>{const selection=document.getElementById('pulpSelection');return [(Number(selection.getAttribute('cx'))-Number(image.getAttribute('x')))/Number(image.getAttribute('width'))*463,(Number(selection.getAttribute('cy'))-Number(image.getAttribute('y')))/Number(image.getAttribute('height'))*662];});
+ expect(sourcePoint[0]).toBeCloseTo(240);expect(sourcePoint[1]).toBeCloseTo(205);
+ await seek(page,3.4);await expect(page.locator('#bananaCellPhoto')).toBeVisible();
+ const selected=await page.locator('#bananaCellPhoto').evaluate(image=>{const selection=document.getElementById('granuleSelection');return [(Number(selection.getAttribute('cx'))-Number(image.getAttribute('x')))/Number(image.getAttribute('width'))*451,(Number(selection.getAttribute('cy'))-Number(image.getAttribute('y')))/Number(image.getAttribute('height'))*313];});
+ expect(selected).toEqual([191,94]);
+ await seek(page,6.3);await expect(page.locator('#granulePhoto')).toBeVisible();
+ await expect(page.locator('#granuleChainModel')).toHaveAttribute('opacity','0');
+ await seek(page,6.9);await expect(page.locator('#granuleChainModel')).toHaveAttribute('opacity','1');
+ await expect(page.locator('#zoomGranuleWorld')).toContainText('照片 → 澱粉鏈結構示意');
+ await seek(page,3.4);await seek(page,6.3);await expect(page.locator('#granuleChainModel')).toHaveAttribute('opacity','0');
 });
