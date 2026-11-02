@@ -87,8 +87,9 @@ test('continuous demonstration completes all four scenes in 74 seconds',async({p
  await page.clock.fastForward(32100);await expect(page.locator('#lesson')).toHaveAttribute('data-playing','false');
  await expect(page.locator('#review')).toBeVisible();await expect(page.locator('#summaryText')).toBeHidden();
 });
-for(const width of [390,768,1440])test(`all diagrams fit at ${width}px in both languages`,async({page})=>{
+for(const width of [390,768,1440,391])test(`all diagrams fit at ${width}px in both languages`,async({page})=>{
  await page.setViewportSize({width,height:900});
+ if(width===391)await page.addStyleTag({content:':root{font-family:monospace}'});
  for(const lang of ['zh','en']){
   await page.locator(`#${lang}`).click();
   for(const reaction of ['starch','maltose','sucrose']){
