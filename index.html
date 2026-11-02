@@ -50,6 +50,13 @@
 .scene-heading>div:first-child{min-width:0}.phase-pill{max-width:30%;white-space:normal;flex-shrink:0}.phase-dot{flex-shrink:0}
 @media(max-width:639px){.scene-heading{flex-direction:column;align-items:flex-start;gap:7px}.phase-pill{max-width:100%}}
 @media(max-width:639px){#zoomGranuleWorld .zoom-title{font-size:26px}.zoom-ribbon{font-size:22px}}
+
+/* Keep every text panel in normal flow when the viewport is too short. */
+.lesson{min-height:min-content;flex-shrink:0}
+.scene-heading,.legend,.story-timebar,.equation,.banana-status,.banana-note,.review,.controls{flex-shrink:0}
+.speed-control{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.speed-control select{font:inherit;color:var(--ink);background:#fffef9;border:1px solid var(--line);border-radius:7px;padding:5px 9px;min-height:36px;cursor:pointer}
+@media(max-width:639px){.story-time-meta{justify-content:flex-start}.speed-control{margin-left:auto}}
 </style>
 </head>
 <body>
@@ -76,7 +83,7 @@
     <div class="scene-heading"><div><div class="eyebrow" id="sceneEyebrow"></div><h2 id="stageCaption" aria-live="polite"></h2></div><div class="phase-pill"><span class="phase-dot"></span><span id="phaseLabel"></span></div></div>
     <figure class="scene" id="scene"><svg id="diagram" role="img" aria-labelledby="diagramTitle diagramDescription"></svg></figure>
     <div class="legend" id="legend"></div>
-    <div class="story-timebar" id="storyTimebar" hidden><div class="story-time-meta"><label for="storyTime" data-t="storyTime"></label><output id="storyTimeLabel" for="storyTime"></output><span id="zoomCapacity"></span></div><input id="storyTime" type="range" min="0" max="32" step="0.1" value="0" data-aria="storyTime"><div class="timebar-ends"><span data-t="unripe"></span><span data-t="timeNotDays"></span><span data-t="ripe"></span></div></div>
+    <div class="story-timebar" id="storyTimebar" hidden><div class="story-time-meta"><label for="storyTime" data-t="storyTime"></label><output id="storyTimeLabel" for="storyTime"></output><label class="speed-control" for="playbackSpeed"><span data-t="playbackSpeed"></span><select id="playbackSpeed" data-aria="playbackSpeed"><option value="0.25">0.25X</option><option value="0.5">0.50X</option><option value="1" selected>1.00X</option><option value="1.25">1.25X</option><option value="1.5">1.50X</option></select></label><span id="zoomCapacity"></span></div><input id="storyTime" type="range" min="0" max="32" step="0.1" value="0" data-aria="storyTime"><div class="timebar-ends"><span data-t="unripe"></span><span data-t="timeNotDays"></span><span data-t="ripe"></span></div></div>
     <div class="equation" id="equation" aria-live="polite"></div>
     <div class="banana-status" id="bananaStatus" hidden><span data-t="starchTrend"></span><span data-t="sugarTrend"></span></div>
     <div class="banana-note" id="bananaNote" data-t="bananaDisclaimer" hidden></div>
@@ -94,15 +101,7 @@
   </div>
   <p class="status-message" id="statusMessage" role="status" hidden></p>
 </div>
-<footer class="teacher-notes">
-  <details id="modelNotes"><summary data-t="modelNotes"></summary><div class="notes-grid">
-    <section><h3 data-t="teacherGuide"></h3><ol><li data-t="guide1"></li><li data-t="guide2"></li><li data-t="guide3"></li><li data-t="guide4"></li></ol><p class="offline" data-t="offline"></p></section>
-    <section><h3 data-t="modelLimits"></h3><ul><li data-t="symbolsNote"></li><li data-t="waterNote"></li><li data-t="starchNote"></li><li data-t="zoomScience"></li><li data-t="rateScience"></li><li data-t="textbookNotes"></li><li data-t="enzymeScope"></li><li data-t="bananaScope"></li><li data-t="observationNote"></li><li data-t="notData"></li></ul>
-      <h3 class="sources" data-t="sources"></h3><ul><li><a href="https://doi.org/10.1016/S0031-9422(97)00931-X" target="_blank" rel="noopener">Prabha &amp; Bhagyalakshmi (1998). <i>Carbohydrate metabolism in ripening banana fruit.</i></a><p data-t="paperUse"></p></li><li><span data-t="enzymeSources"></span> <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/1.html" target="_blank" rel="noopener">EC 3.2.1.1</a> · <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/20.html" target="_blank" rel="noopener">EC 3.2.1.20</a> · <a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/48.html" target="_blank" rel="noopener">EC 3.2.1.48</a><p data-t="ecCaution"></p></li></ul>
-      <ul class="zoom-sources"><li><a href="https://iubmb.qmul.ac.uk/enzyme/EC3/2/1/2.html" target="_blank" rel="noopener">IUBMB EC 3.2.1.2 · 澱粉酶的一個例子 / one amylase example</a><span data-t="betaSource"></span></li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5785343/" target="_blank" rel="noopener">Xiao et al. (2018), DOI: 10.1111/pbi.12756</a><span data-t="rateSource"></span></li><li><a href="https://pubmed.ncbi.nlm.nih.gov/12358438/" target="_blank" rel="noopener">Bassinello et al. (2002), DOI: 10.1021/jf011370p</a><span data-t="bananaEnzymeSource"></span></li></ul>
-    </section>
-  </div></details>
-</footer>
+
 <script>
 'use strict';
 (() => {
@@ -264,10 +263,11 @@ Object.assign(words,{
  observationNote:['香蕉及香蕉果肉細胞使用你提供的照片；第三層放大圈選的澱粉顆粒，再轉為含多條澱粉鏈的結構示意。分子鏈並非在照片中直接可見，圖中不表示真實比例。','The banana and pulp-cell views use your uploaded photos. Level 03 enlarges the marked starch granule, then introduces a model of multiple starch chains. Individual chains are not directly visible in the photo; scales are conceptual.'],
  diagramBDesc:['由香蕉果肉照片放大到果肉細胞照片，再放大圈選的澱粉顆粒，轉入多條澱粉鏈與水解的教學模型。','Zoom from the exposed banana pulp photo to the pulp-cell photo and a marked starch granule, then transition into schematic starch chains and hydrolysis.']
 });
+words.playbackSpeed=['播放速度','Playback speed'];
 const $ = id => document.getElementById(id);
 const reactions = {starch:{enzyme:'amylase',n:6,cut:3,title:'starchHydrolysis'},maltose:{enzyme:'maltase',n:2,cut:0,title:'maltoseHydrolysis'},sucrose:{enzyme:'sucrase',n:2,cut:0,title:'sucroseHydrolysis'}};
 const order=['starch','maltose','sucrose','banana'];
-const state={lang:'zh',mode:'banana',reaction:'starch',elapsed:0,running:false,sequence:false,sequenceIndex:0,enzymeVisible:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,summary:false};
+const state={lang:'zh',mode:'banana',reaction:'starch',elapsed:0,speed:1,running:false,sequence:false,sequenceIndex:0,enzymeVisible:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,summary:false};
 let rafId=null,lastNow=0,cache={},equationKey='',mobile=matchMedia('(max-width:639px)').matches;
 const t=key => words[key]?.[state.lang==='zh'?0:1] ?? key;
 const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
@@ -593,10 +593,11 @@ function render(){
   if(document.activeElement!==$('storyTime'))$('storyTime').value=state.elapsed.toFixed(1);
   text('storyTimeLabel',`${state.elapsed.toFixed(1)} / ${duration()} s`);
   text('showSummary',t(state.summary?'hideSummary':'showSummary'));
+  $('playbackSpeed').value=String(state.speed);
   attr($('modeA'),'aria-pressed',!banana);attr($('modeB'),'aria-pressed',banana);
   document.querySelectorAll('button[data-reaction]').forEach(el=>attr(el,'aria-pressed',el.dataset.reaction===state.reaction));
   $('enzymeToggle').checked=state.enzymeVisible;$('motionToggle').checked=state.reduced;
-  attr($('sequence'),'aria-pressed',state.sequence);text('sequenceLabel',t(state.sequence?'stopSequence':'sequence'));text('sequenceDuration',t('sequenceTime'));
+  attr($('sequence'),'aria-pressed',state.sequence);text('sequenceLabel',t(state.sequence?'stopSequence':'sequence'));text('sequenceDuration',state.lang==='zh'?`約 ${(74/state.speed).toFixed(0)} 秒`:`About ${(74/state.speed).toFixed(0)} s`);
   text('playLabel',t(state.running?'pause':state.elapsed>0&&!done?'continue':done?'replay':'play'));
   const icon=state.running?'<path d="M7 4v16M17 4v16" stroke-width="4"/>':'<path d="m7 3 14 9-14 9V3Z" fill="currentColor" stroke="none"/>';
   if($('playIcon').dataset.playing!==String(state.running)){
@@ -616,13 +617,13 @@ function render(){
     text('ledger',`${t('bondsBroken')} ${used} · ${t('watersUsed')} ${used}`);equation(p);
   }
   // Stable, language-neutral state for accessibility inspection and automated checks.
-  Object.assign($('lesson').dataset,{mode:state.mode,reaction:state.reaction,elapsed:state.elapsed.toFixed(3),playing:String(state.running),sequence:String(state.sequence),reduced:String(state.reduced)});
+  Object.assign($('lesson').dataset,{mode:state.mode,reaction:state.reaction,elapsed:state.elapsed.toFixed(3),playing:String(state.running),sequence:String(state.sequence),reduced:String(state.reduced),speed:String(state.speed)});
 }
 function cancelFrame(){if(rafId!==null)cancelAnimationFrame(rafId);rafId=null;}
 function setScene(item){state.mode=item==='banana'?'banana':'hydrolysis';if(item!=='banana')state.reaction=item;state.elapsed=0;state.summary=false;state.enzymeVisible=state.mode==='hydrolysis'&&state.running;build();}
 function frame(now){
   rafId=null;if(!state.running)return;
-  let remaining=(now-lastNow)/1000;lastNow=now;
+  let remaining=(now-lastNow)/1000*state.speed;lastNow=now;
   while(remaining>0&&state.running){
     const step=Math.min(remaining,duration()-state.elapsed);state.elapsed+=step;remaining-=step;
     if(state.elapsed>=duration()){
@@ -662,6 +663,13 @@ const media=matchMedia('(max-width:639px)');media.addEventListener('change',even
 document.querySelectorAll('[data-zoom]').forEach(el=>el.addEventListener('click',()=>{
   pause();state.sequence=false;state.elapsed=Number(el.dataset.zoom);state.summary=false;render();
 }));
+$('playbackSpeed').addEventListener('change',event=>{
+  const nextSpeed=Number(event.target.value);
+  if(![.25,.5,1,1.25,1.5].includes(nextSpeed))return;
+  // Finish the pending interval at the old speed, then apply the new rate.
+  if(state.running){cancelFrame();frame(performance.now());}
+  state.speed=nextSpeed;render();
+});
 $('storyTime').addEventListener('input',event=>{
   const value=Number(event.target.value);pause();state.sequence=false;state.elapsed=clamp(value,0,duration());state.summary=false;render();
 });

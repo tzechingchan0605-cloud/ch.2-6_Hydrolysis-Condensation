@@ -121,3 +121,56 @@ test('the uploaded photos are embedded exactly and the selected cell granule sup
  await expect(page.locator('#zoomGranuleWorld')).toContainText('照片 → 澱粉鏈結構示意');
  await seek(page,3.4);await seek(page,6.3);await expect(page.locator('#granuleChainModel')).toHaveAttribute('opacity','0');
 });
+
+test('teacher notes section is removed',async({page})=>{
+ await expect(page.locator('#modelNotes, footer.teacher-notes')).toHaveCount(0);
+ await expect(page.locator('body')).not.toContainText('模型說明、科學來源與教師操作');
+});
+for(const mode of ['banana','maltose'])test(`${mode}: all five playback speeds advance by the selected rate`,async({page})=>{
+ if(mode!=='banana')await choose(page,mode);
+ await expect(page.locator('#playbackSpeed option')).toHaveText(['0.25X','0.50X','1.00X','1.25X','1.50X']);
+ for(const speed of ['0.25','0.5','1','1.25','1.5']){
+  await seek(page,0);await page.locator('#playbackSpeed').selectOption(speed);await page.locator('#play').click();
+  await page.clock.runFor(2000);await page.locator('#play').click();
+  expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(2*Number(speed),1);
+ }
+});
+test('changing speed during playback preserves the current frame, scrubbing and language keep the rate',async({page})=>{
+ await page.locator('#play').click();await page.clock.runFor(2000);
+ const before=Number(await page.locator('#lesson').getAttribute('data-elapsed'));
+ await page.locator('#playbackSpeed').selectOption('0.25');
+ expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(before,1);
+ await page.clock.runFor(4000);await page.locator('#play').click();
+ expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(before+1,1);
+ await seek(page,15);await page.locator('#en').click();await choose(page,'sucrose');
+ await expect(page.locator('#playbackSpeed')).toHaveValue('0.25');
+ await expect(page.locator('#playbackSpeed')).toHaveAccessibleName('Playback speed');
+ await page.locator('#replay').click();await page.clock.runFor(2000);await page.locator('#play').click();
+ expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(.5,1);
+});
+test('continuous demonstration respects speed across scene boundaries and stops at the end',async({page})=>{
+ await page.locator('#playbackSpeed').selectOption('1.5');await page.locator('#sequence').click();
+ await page.clock.runFor(10000);await expect(page.locator('#lesson')).toHaveAttribute('data-reaction','maltose');
+ expect(Number(await page.locator('#lesson').getAttribute('data-elapsed'))).toBeCloseTo(1,1);
+ await page.clock.fastForward(40000);await expect(page.locator('#lesson')).toHaveAttribute('data-mode','banana');
+ await expect(page.locator('#lesson')).toHaveAttribute('data-elapsed','32.000');await expect(page.locator('#lesson')).toHaveAttribute('data-playing','false');
+});
+for(const size of [{width:1240,height:700},{width:1440,height:810},{width:390,height:844}])test(`text panels and controls never overlap at ${size.width}×${size.height}`,async({page})=>{
+ await page.setViewportSize(size);
+ for(const lang of ['zh','en']){
+  await page.locator(`#${lang}`).click();
+  for(const sec of [0,28.2,32]){
+   await seek(page,sec);
+   if(sec===32)await page.locator('#showSummary').click();
+   const boxes=await page.evaluate(()=>{
+    const ids=['scene','legend','storyTimebar','bananaStatus','bananaNote','review'];
+    const panels=ids.map(id=>document.getElementById(id)).filter(e=>!e.hidden).map(e=>({id:e.id,top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom}));
+    return {panels,lesson:document.getElementById('lesson').getBoundingClientRect().toJSON(),controls:document.querySelector('.controls').getBoundingClientRect().toJSON()};
+   });
+   for(let i=1;i<boxes.panels.length;i++)expect(boxes.panels[i].top,`${boxes.panels[i].id} overlaps previous panel`).toBeGreaterThanOrEqual(boxes.panels[i-1].bottom-1);
+   expect(boxes.controls.top).toBeGreaterThanOrEqual(boxes.lesson.bottom);
+   expect(boxes.lesson.bottom).toBeGreaterThanOrEqual(boxes.panels.at(-1).bottom);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  }
+ }
+});

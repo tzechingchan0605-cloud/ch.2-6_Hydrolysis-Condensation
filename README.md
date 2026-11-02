@@ -6,6 +6,7 @@ Offline bilingual Form 4 biology teaching simulator. Open `index.html` directly 
 
 - **A 水解反應:** choose starch, maltose or sucrose hydrolysis. Enzyme names appear immediately. Play, pause, replay, or drag the timeline in either direction. Each example lasts 14 seconds.
 - **B 香蕉成熟:** four zoom levels, a 32-second timeline, and a final discussion/summary. Molecular level is named **多糖與雙糖的水解**.
+- Both timelines provide 0.25X, 0.50X, 1.00X, 1.25X and 1.50X playback speeds. Speed persists across scenes, seeking, replay and language changes.
 - Language changes preserve playback time. Reduced motion, keyboard seeking and full screen are supported.
 - Continuous demonstration plays all three reactions followed by banana exploration in 74 seconds. Seeking pauses and exits continuous demonstration.
 
@@ -35,4 +36,4 @@ Browser checks cover complete reaction products and water balance, enzyme reuse 
 
 Existing GitHub Pages workflow tests and publishes `index.html` after a push to main. No deployment is performed by opening the local file.
 
-Sources and model limits are available in the page's teacher notes. Supplied textbook PDFs are not redistributed.
+The collapsible model-notes/source/teacher-guide footer has been removed from the simulator. Supplied textbook PDFs are not redistributed.
