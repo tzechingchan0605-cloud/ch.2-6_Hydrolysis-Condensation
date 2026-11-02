@@ -573,7 +573,7 @@ function buildLegend(){
 }
 function equation(p){
   if(state.mode==='banana')return;
-  const r=reactions[state.reaction],revealed=p>=.40;
+  const r=reactions[state.reaction],revealed=state.reaction==='starch'?state.elapsed>=cache.zoom.events[0].cut:p>=.40;
   const key=[state.lang,state.reaction,revealed,state.enzymeVisible].join(':');
   if(key===equationKey)return;
   equationKey=key;
@@ -609,11 +609,17 @@ function render(){
     zoomBananaSnapshot(state.elapsed);
   }else{
     const used=state.reaction==='starch'?zoomMoleculeSnapshot(state.elapsed):hydrolysisSnapshot(p);
-    const phase=p<.12?0:p<.26?1:p<.40?2:p<.55?3:p<.94?4:5;
+    let phase=p<.12?0:p<.26?1:p<.40?2:p<.55?3:p<.94?4:5;
     let caption=['contact','contact','waterAction','breakAction','reuse','finished'][phase];
     if(p>=.70&&p<.82)caption='secondWater';
+    if(state.reaction==='starch'){
+      const sec=state.elapsed,events=cache.zoom.events;
+      const event=events.find(e=>sec<e.end);
+      phase=!event?5:sec<event.start?(used?4:0):sec<event.dock?1:sec<event.cut?2:3;
+      caption=['contact','contact','waterAction','breakAction','reuse','finished'][phase];
+    }
     text('sceneEyebrow',t(state.reaction==='starch'?'simplified':'hydrolysisExample'));
-    text('stageCaption',p<.12?`${t(reactions[state.reaction].enzyme)} · ${t('contact')}`:t(caption));text('phaseLabel',`${phase+1} / 6 · ${t(['before','catalysis','waterStage','productsStage','reuseStage','complete'][phase])}`);
+    text('stageCaption',phase===0?`${t(reactions[state.reaction].enzyme)} · ${t('contact')}`:t(caption));text('phaseLabel',`${phase+1} / 6 · ${t(['before','catalysis','waterStage','productsStage','reuseStage','complete'][phase])}`);
     text('ledger',`${t('bondsBroken')} ${used} · ${t('watersUsed')} ${used}`);equation(p);
   }
   // Stable, language-neutral state for accessibility inspection and automated checks.
