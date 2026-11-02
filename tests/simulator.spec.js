@@ -174,3 +174,11 @@ for(const size of [{width:1240,height:700},{width:1440,height:810},{width:390,he
   }
  }
 });
+
+test('starch captions and product labels match the actual cleavage events when seeking both ways',async({page})=>{
+ await choose(page,'starch');
+ for(const [sec,count,caption,product] of [[2.5,0,'水解','生成物待揭示'],[4.5,1,'分解代謝後，產物從酶中釋出','麥芽糖'],[7.5,1,'水解','麥芽糖'],[10,2,'分解代謝後，產物從酶中釋出','麥芽糖'],[11,2,'酶沒有被消耗，可再次使用','麥芽糖'],[3.9,0,'水解','生成物待揭示'],[4,1,'分解代謝後，產物從酶中釋出','麥芽糖']]){
+  await seek(page,sec);await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-cleavages',String(count));
+  await expect(page.locator('#stageCaption')).toHaveText(caption);await expect(page.locator('[data-equation-product]')).toHaveText(product);
+ }
+});
