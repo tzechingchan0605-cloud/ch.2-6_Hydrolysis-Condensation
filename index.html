@@ -236,7 +236,7 @@ zoomScale:["概念放大 · 比例不連續 · 非顯微鏡影片","Conceptual z
 complex:["形成酶受質複合物","An enzyme–substrate complex forms"],
 productive:["受質局部與活性部位配合、結合","A substrate region binds at the active site"],
 releaseMaltose:["澱粉鏈逐步水解，直至顯示的鏈全部變成麥芽糖","Hydrolysis continues until the displayed chain is fully converted to maltose"],
-parallelHydrolysis:["同一個酶可重複催化水解","The same enzyme repeatedly catalyses hydrolysis"],
+parallelHydrolysis:["澱粉水解與麥芽糖水解可同時進行","Starch and maltose hydrolysis can proceed together"],
 maltoseSplit:["麥芽糖 ＋ 水 → 葡萄糖 ＋ 葡萄糖","Maltose + water → glucose + glucose"],
 zoomFinished:["回到整體：部分澱粉減少，可溶性糖增加","Back to the whole fruit: less starch, more soluble sugar"],
 moleculeExample:["分子教學例子，不指定真實反應位置","Molecular teaching examples; locations are not literal"],
@@ -402,7 +402,7 @@ function bananaSnapshot(p){
 const enzymeColours={amylase:['#2b7d80','#175c60'],maltase:['#7661a4','#514173'],sucrase:['#b35b48','#803f31']};
 const zoomEvents=[
  ...[1,3,5].map((bond,i)=>({id:`release${i}`,bond,start:8.5+i*2.2,dock:9.5+i*2.2,cut:10.7+i*2.2,end:11.6+i*2.2,enzyme:'amylase'})),
- ...[0,2,4,6].map((bond,i)=>({id:`maltase${i}`,bond,start:16+i*2.3,dock:16.7+i*2.3,cut:17.9+i*2.3,end:18.8+i*2.3,enzyme:'maltase'}))
+ ...[0,2,4,6].map((bond,i)=>({id:`maltase${i}`,bond,start:11.6+i*2.8,dock:12.3+i*2.8,cut:13.5+i*2.8,end:14.4+i*2.8,enzyme:'maltase'}))
 ];
 function pocketGeometry(half,radius,rightFructose=false,long=false){
  const r=radius+1.5,centres=long?[-3*half,-half,half,3*half]:[-half,half];
