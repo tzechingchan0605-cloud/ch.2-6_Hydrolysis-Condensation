@@ -20,13 +20,14 @@ test('renamed levels, multiple chains and only the two working enzymes',async({p
  await expect(page.locator('[data-molecule="water"] circle')).toHaveCount(0);
  await expect(page.locator('#zoomMoleculeWorld')).toContainText('1 個雙糖 ＋ H₂O → 2 個單糖');
 });
-test('the entire eight-unit chain becomes four maltose molecules, then eight glucose molecules',async({page})=>{
+test('the entire eight-unit chain releases maltose while earlier maltose is already converted to glucose',async({page})=>{
  await seek(page,11.8);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(6);
  await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(2);
  await seek(page,15.9);await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(0);
- await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(8);
- await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(4);
- await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','3');
+ await expect(page.locator('#zNodes [data-product="maltose"]')).toHaveCount(6);
+ await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(2);
+ await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(3);
+ await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','4');
  await seek(page,25.8);await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(8);
  await expect(page.locator('#zBonds [data-cleaved="false"]')).toHaveCount(0);
  await expect(page.locator('#zoomMoleculeWorld')).toHaveAttribute('data-waters-used','7');
@@ -182,3 +183,14 @@ test('starch captions and product labels match the actual cleavage events when s
   await expect(page.locator('#stageCaption')).toHaveText(caption);await expect(page.locator('[data-equation-product]')).toHaveText(product);
  }
 });
+
+ test('maltase works while amylase is still breaking down starch',async({page})=>{
+ await seek(page,12.5);
+ await expect(page.locator('#zReactionrelease1')).toHaveAttribute('data-bound','true');
+ await expect(page.locator('#zReactionmaltase0')).toHaveAttribute('data-bound','true');
+ await seek(page,13.6);
+ await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(2);
+ await expect(page.locator('#zNodes [data-product="starch"]')).toHaveCount(4);
+ await seek(page,23);await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(8);
+ await seek(page,10);await expect(page.locator('#zNodes [data-product="glucose"]')).toHaveCount(0);
+ });
